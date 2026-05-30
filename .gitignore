@@ -1,0 +1,26 @@
+# Dependencies
+/vendor/
+/node_modules/
+
+# Build artifacts / distributable
+/build/
+/dist/
+*.zip
+
+# Local config / secrets — never commit
+*.local
+.env
+.env.*
+wp-config-local.php
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*~
+
+# PHP tooling
+.phpunit.result.cache
+/coverage/
