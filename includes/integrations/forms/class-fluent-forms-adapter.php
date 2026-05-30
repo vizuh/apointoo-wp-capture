@@ -7,14 +7,17 @@
 
 namespace Apointoo\Capture\Integrations\Forms;
 
+use Apointoo\Capture\Capture\Attribution;
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
 /**
- * Captures Fluent Forms submissions server-side (Path B).
+ * Captures Fluent Forms submissions.
  *
- * Structure + hook are in place; reading `$form_data` (name-keyed) is the M3 task.
+ * Free tier: attaches the first-party attribution to the submission as submission
+ * meta (no owner config). Paid forwarding to Apointoo is deferred (contract-gated).
  */
 class Fluent_Forms_Adapter extends Abstract_Form_Adapter {
 
@@ -63,8 +66,17 @@ class Fluent_Forms_Adapter extends Abstract_Form_Adapter {
 	 * @return void
 	 */
 	public function on_submission_inserted( $entry_id, $form_data, $form ) {
-		// @todo M3: read $form_data (name-keyed) → $flat_fields, then
-		// $this->capture( $form->id, $flat_fields ). See docs/PLAN.md §4.
-		unset( $entry_id, $form_data, $form );
+		$entry_id = absint( $entry_id );
+		if ( ! $entry_id || ! class_exists( '\FluentForm\App\Helpers\Helper' ) ) {
+			return;
+		}
+		$form_id = ( is_object( $form ) && isset( $form->id ) ) ? absint( $form->id ) : 0;
+
+		foreach ( Attribution::from_cookie() as $key => $value ) {
+			if ( '' !== $value ) {
+				\FluentForm\App\Helpers\Helper::setSubmissionMeta( $entry_id, $key, $value, $form_id );
+			}
+		}
+		// @todo Paid tier: build a Lead from $form_data + forward to Apointoo.
 	}
 }

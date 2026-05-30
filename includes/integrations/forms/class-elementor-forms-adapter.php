@@ -7,14 +7,19 @@
 
 namespace Apointoo\Capture\Integrations\Forms;
 
+use Apointoo\Capture\Capture\Attribution;
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
 /**
- * Captures Elementor Pro form submissions server-side (Path B).
+ * Captures Elementor Pro form submissions.
  *
- * Structure + hook are in place; flattening `$record->get('fields')` is the M3 task.
+ * Free tier: adds the first-party attribution to the record as hidden fields so
+ * it stores with the submission. Elementor's record API is less stable than the
+ * others — calls are guarded and should be verified on a live site. Paid
+ * forwarding to Apointoo is deferred (contract-gated).
  */
 class Elementor_Forms_Adapter extends Abstract_Form_Adapter {
 
@@ -62,8 +67,22 @@ class Elementor_Forms_Adapter extends Abstract_Form_Adapter {
 	 * @return void
 	 */
 	public function on_new_record( $record, $ajax_handler ) {
-		// @todo M3: flatten $record->get('fields') (id/title/value) → $flat_fields,
-		// resolve a form id, then $this->capture(). See docs/PLAN.md §4.
-		unset( $record, $ajax_handler );
+		unset( $ajax_handler );
+		if ( ! is_object( $record ) || ! method_exists( $record, 'add_field' ) ) {
+			return;
+		}
+		foreach ( Attribution::from_cookie() as $key => $value ) {
+			if ( '' === $value ) {
+				continue;
+			}
+			$record->add_field(
+				array(
+					'type'  => 'hidden',
+					'id'    => $key,
+					'value' => $value,
+				)
+			);
+		}
+		// @todo Paid tier: build a Lead from $record fields + forward to Apointoo.
 	}
 }
