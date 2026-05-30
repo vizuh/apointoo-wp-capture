@@ -229,8 +229,9 @@ add-on); ClickTrail is a separate generic free plugin.
 **Distribution — two paths, decided by wordpress.org.**
 1. **Try wordpress.org (free directory).** SaaS connectors are **explicitly permitted** — Guideline 6:
    third-party services are fine *if* they provide substantive functionality and the readme links the service's
-   terms of use. So the risk is not "connectors are banned"; it is meeting the connector rules. **wp.org
-   pre-submission checklist** (grounded in the Plugin Directory Guidelines, fetched 2026-05-30):
+   terms of use. So the risk is not "connectors are banned"; it is meeting the connector rules. The full grounded, actionable
+   pre-submission checklist (blockers, security, naming/ownership, readme, packaging) is in
+   **`docs/WP-ORG-SUBMISSION.md`**. Key gates:
    - **Functional at submission (G16).** The plugin must actually capture-and-send. *This blocks submission
      until the real transport ships (M1+) — a stubbed connector cannot be submitted.*
    - **Full GPLv2-or-later + human-readable source (G1, G4).** Switch `LICENSE`; **no proprietary/obfuscated
@@ -242,7 +243,16 @@ add-on); ClickTrail is a separate generic free plugin.
      are fine; non-service JS/CSS must be local.
    - **No plugin-side paywall (G5 — "no trialware").** All plugin functionality stays free; payment lives on
      the service, not behind a plugin gate.
-   - **Security review** — sanitise/escape/nonce/capability checks (the WordPress-hardening clause above).
+   - **Security review** — the form names the **top-3 rejection reasons: unescaped output, unsanitised input,
+     form data without a nonce.** The visitor `/wp-json` proxy + settings screen (both still stubs) must nail
+     all three when built.
+   - **Pass the Plugin Check (PCP) plugin — the submit form makes you confirm this.** `wp plugin check
+     apointoo-wp-capture`; it checks readme.txt, plugin headers, late-escaping, i18n, and trademark terms
+     (beyond phpcs). phpcs is clean; PCP is the actual gate — run it before submitting.
+   - **Prove brand ownership via the submitting account's profile email.** "Apointoo Capture" starts with the
+     Vizuh-owned brand "Apointoo", so the wordpress.org account's **profile email domain must be @vizuh.com /
+     an Apointoo domain — NOT the personal gmail**, or reviewers flag the name (Plugin Ownership rule). The
+     plugin slug/URL is derived from `Plugin Name` and is permanent once approved.
    - **If accepted:** repo → **public + GPLv2-or-later**, updates via the wp.org SVN trunk.
    - **If rejected / not pursued:** distribute **privately by ZIP**; repo **stays private + proprietary**.
 2. Either way the plugin is **free** — clients pay for the Apointoo service, not the connector. *(This
