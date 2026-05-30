@@ -3,8 +3,11 @@
 Connects a WordPress site's **existing** forms to the Apointoo capture contract, so leads and their
 attribution flow into the Apointoo SDK — server-side, consent-aware, with PII hashed before it leaves the site.
 
-> **Status: skeleton.** No functional code yet — by design. This plugin is *downstream* of the public
-> capture contract, which does not exist yet. See [Build order](#build-order).
+> **Status: scaffold.** The capture/wiring layer is built to WordPress standards (phpcs/WPCS clean,
+> PHP 8.0+ compatible): autoloader, plugin bootstrap, the form-adapter framework (interface + abstract +
+> manager), CF7 wired with the other four adapters stubbed for M3, plus the neutral lead value object, PII
+> hasher (B5), and consent reader. The **SDK transport and the visitor `/wp-json` proxy are stubs** until the
+> public capture contract lands. See [Build order](#build-order).
 
 ## The hard boundary
 
@@ -51,6 +54,23 @@ Design source of truth (in `vizuh/apointoo-sdk`):
 Self-hosted, **not** wordpress.org (proprietary, agency-distributed, calls a paid first-party SDK). Updates
 via a Vizuh-controlled update server, gated behind a license key. Two distinct credentials, kept separate:
 a **license key** (gates updates) and a **server secret** (tenant API token, authenticates SDK calls).
+
+## Development
+
+Conventions mirror `vizuh/click-trail-handler` (the house WordPress plugin): namespace `Apointoo\Capture`
+(PSR-4 → `includes/`), classic WPCS file names (`class-*.php` / `interface-*.php`), a runtime autoloader, and
+prefixes `apointoo_capture_` / `APOINTOO_CAPTURE_`.
+
+```bash
+composer install        # dev tooling (phpcs, WPCS, phpcompatibility, phpunit)
+composer run phpcs      # WordPress Coding Standards (currently clean)
+composer run phpcbf      # auto-fix what phpcs can
+composer run phpcompat  # PHP 8.0+ compatibility
+```
+
+CI runs phpcs + PHP-compatibility on every push/PR (`.github/workflows/`). The repo currently passes both.
+No PHP runtime is required to develop the design — but the checks need PHP/Composer (or run them in a
+`docker.io/library/composer:2` container, as CI does).
 
 ## Security & privacy
 
