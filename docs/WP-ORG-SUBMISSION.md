@@ -5,16 +5,19 @@ Grounded in the **Detailed Plugin Guidelines**, **Plugin Developer FAQ**, and **
 
 ## Verdict: NOT submittable yet — two ⛔ blockers
 
-- ⛔ **Placeholders / not production-ready.** The SDK transport is a no-op stub, 4 of 5 form adapters are stubs,
-  and the `/wp-json` proxy + settings screen aren't built. FAQ, verbatim: *"We do not accept placeholders or
-  plugins that aren't ready to be used… production-ready: complete, without errors, without unnecessary logs,
-  without development tools."* → Build the real capture-and-send path first. **This needs the SDK capture
-  contract (plugin milestone M1).**
-- ⛔ **Sandbox-only = trialware (G5).** *"Plugins that provide sandbox only access to APIs and services are…
-  trial… and not permitted."* It must work against **production** Apointoo tenants, not just the sandbox.
+- ⛔ → ✅ **"Does nothing" resolved by the FREE TIER (2026-05-30 model change).** The plugin no longer depends
+  on the Apointoo service to be useful: the **free tier** captures attribution and **injects it as hidden
+  fields into the site's existing forms**, delivering richer leads to the *owner's own systems* with **no
+  external calls**. That is a complete, useful, standalone plugin (G16/G5/G6/G7 satisfied) — and it has **no
+  dependency on the Apointoo capture contract**, so it is buildable + submittable now. The Apointoo send is an
+  opt-in layer, off by default.
+- ⛔ **Still required: build the free tier itself.** The current code captures form fields on submit but the
+  attribution-capture + hidden-field *injection* (the `populate_fields` half) and a small JS tracker are not
+  built yet. Until they are, the plugin is a placeholder — wp.org rejects placeholders. **This is the real
+  pre-submission build, and it does NOT need the SDK contract.**
 
-**So wp.org submission is downstream of M1.** Everything below is the checklist for when the code is real.
-Submitting now burns a 5–14 day review cycle on a guaranteed rejection.
+**So wp.org submission is gated on building the free tier (local, contract-independent) — not on M1.** The
+Apointoo transport stays stubbed/optional.
 
 ## Naming & ownership — actionable NOW (independent of code)
 

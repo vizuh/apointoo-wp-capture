@@ -30,6 +30,28 @@ Google Ads accounts. The closest competitor is **PixelYourSite Conversion Export
 agency license + Data-Manager-compatible hashed feed). **The moat is not raw server-side upload mechanics —
 it's the outcome-resolution layer + the multi-account agency control plane.**
 
+## 1a. Product model — free tier + optional paid connection (Hugo 2026-05-30)
+
+The plugin delivers value **standalone, with zero data sent anywhere** — which is what makes it a useful,
+wp.org-legal *free* plugin (not a thin front-end for a paid service, not trialware, not "does nothing"):
+
+- **Free tier (local, no external calls): improved form tracking.** Capture marketing attribution (UTM,
+  gclid/gbraid/wbraid/fbclid/msclkid, referrer, landing page, first/last touch) across the visitor's journey,
+  persist it first-party, and **inject it as hidden fields into the site's existing forms** — so it submits
+  straight into the site owner's *own* systems (their CRM, email, form entries). We process nothing; the owner
+  gets richer leads for free. This is the proven ClickTrail model and is fully functional without Apointoo.
+- **Paid/connected tier (opt-in): send to Apointoo.** Once the owner enters Apointoo credentials, the same
+  captured data is *also* forwarded (hashed PII + attribution + consent) to the Apointoo SDK for offline
+  conversion upload, identity/outcome resolution, and the ledger. This is the only part that contacts an
+  external service, and it is **off by default**.
+
+Implications:
+- **wp.org blockers dissolve** — the free tier does something genuinely useful alone (G16/G5/G6/G7 satisfied);
+  no external call until the owner opts in.
+- **The free tier has NO dependency on the Apointoo capture contract** — buildable and submittable **now**,
+  independent of the SDK/M1 work. The Apointoo send stays the optional, contract-gated layer.
+- The hard boundary still holds (next section): we inject into *existing* forms; we never build a form.
+
 ## 2. THE HARD BOUNDARY
 
 **This is a capture + wiring adapter, NOT a form product. It adapts to forms that already exist on the site;
