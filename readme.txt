@@ -51,16 +51,17 @@ Cookiebot) and only forwards ad identifiers when marketing consent is granted.
   is stubbed pending the public capture contract.
 
 <!--
-  ── INTERNAL NOTE — not for wp.org submission as-is ─────────────────────────
-  wordpress.org REQUIRES a GPL-compatible license. This plugin is currently
-  PROPRIETARY (self-hosted, agency-distributed — see docs/PLAN.md §8). Before any
-  wp.org submission the following must be decided/resolved:
-    1. License: switch to GPLv2-or-later (the LICENSE file + this header).
-    2. External-service disclosure: wp.org requires documenting what data is sent
-       to the Apointoo SDK, where, and a link to its TOS/privacy policy.
-    3. No "calling home" without explicit user setup (already true — keys are
-       entered in settings; nothing fires until configured).
-    4. Build the real transport + the deferred security/privacy gates
-       (issues I1–I4, DPIA R3/R4) before real PII flows.
-  Until then this readme is a structural draft only.
+  ── INTERNAL NOTE ───────────────────────────────────────────────────────────
+  This is the PAID, off-directory pro product (locked 2026-05-30) — it is NOT
+  submitted to the wordpress.org directory. The free wp.org funnel is ClickTrail
+  (vizuh/click-trail-handler). This readme.txt is kept for the update-info modal
+  and as docs, not for a directory listing. See docs/PLAN.md §8.
+
+  Still to do before real (non-sandbox) PII flows:
+    - License sub-decision: proprietary (current) vs split-GPL — free choice
+      off-directory; does not affect selling.
+    - External-service disclosure of the Apointoo SDK data flow (good practice +
+      MoR/Freemius requirement) — the DPIA already documents it.
+    - Build the real transport + the deferred security/privacy gates
+      (issues I1–I4, DPIA R3/R4).
 -->

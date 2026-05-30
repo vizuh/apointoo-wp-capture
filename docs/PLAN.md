@@ -219,14 +219,35 @@ Small, reversible steps throughout (sandbox before prod; Hugo sole stakeholder).
 
 ## 8. Distribution & auth
 
-**Self-hosted, not wordpress.org.** A plugin whose core function is calling a paid, proprietary first-party
-SDK is a poor fit for the .org directory (favors self-contained, non-external-service, non-obfuscated plugins)
-and conflicts with the encrypted-secret + license-gated, agency-distributed posture. Matches the API-first /
-no-shared-booking-lib stance: each tenant is unique; the agency pushes updates and revokes access per client.
+**Locked 2026-05-30 (Hugo): paid, standalone, OFF wordpress.org — the pro half of a freemium funnel.**
 
-**Update mechanism:** a version JSON + ZIP (correct parent-folder wrapper) from a Vizuh-controlled update
-server, via **Plugin Update Checker** (YahnisElsts) — or core `plugins_api` + `pre_set_site_transient_update_plugins`
-for a lighter custom updater. The ZIP download URL is **gated behind a license key** entered in settings.
+**Freemium funnel, two separate products.**
+- **Free top-of-funnel: ClickTrail** (`vizuh/click-trail-handler`) — GPL, on the wordpress.org directory.
+  Generic attribution/consent/forms; useful standalone; earns discovery + installs. Carries a tasteful upsell
+  to Apointoo.
+- **Paid pro: Apointoo Capture** (this plugin) — distributed **off** wordpress.org. It is *standalone*, not a
+  ClickTrail add-on (confirmed 2026-05-30): no code coupling; ClickTrail funnels to it by positioning only.
+
+**Why off-directory (and why that's correct, not a workaround).** wordpress.org has **no paid marketplace** —
+the directory is free/GPL-only; you cannot sell there. Its guidelines also discourage free-directory plugins
+that are a thin front-end for a paid external service and do nothing alone — which Apointoo Capture is (useless
+without the paid Apointoo SDK). So it belongs off-directory by the rules, not in spite of them; ClickTrail
+(works standalone) is the right free citizen.
+
+**Selling (paid, off-directory).** Sell via a **Merchant-of-Record** platform — **Freemius** or **Lemon
+Squeezy** (or Paddle) — which handle EU VAT MOSS + US sales tax for Vizuh OÜ, in-plugin checkout, licensing,
+and freemium analytics. **EDD** is an alternative but is *not* MoR (Vizuh would handle VAT itself). For
+managed clients, install the licensed plugin directly with a key — no marketplace involved.
+
+**License (now a free choice — off-wp.org removes the GPL requirement).** GPL is only mandatory for
+wordpress.org-hosted plugins; off-directory it is your call and does **not** prevent selling (premium plugins
+are routinely GPL and sold — you sell updates/support/the SDK connection, not the right to the code). Options:
+keep **proprietary** (current `LICENSE`), or the common premium **split** (PHP = GPLv2-or-later, JS/CSS/assets
+proprietary). *Sub-decision still open; low stakes.*
+
+**Update mechanism:** the MoR platform's updater (Freemius/EDD both ship one) or a version JSON + ZIP from a
+Vizuh-controlled update server via **Plugin Update Checker** (YahnisElsts). The download is **gated behind a
+license key** entered in settings.
 
 **Two distinct credentials, kept separate in UI and contract:**
 - **License key** — gates plugin updates/downloads from the Vizuh update server (EDD-style or lightweight
