@@ -7,15 +7,18 @@
 
 namespace Apointoo\Capture\Integrations\Forms;
 
+use Apointoo\Capture\Capture\Attribution;
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
 /**
- * Captures Gravity Forms submissions server-side (Path B).
+ * Captures Gravity Forms submissions.
  *
- * Structure + hook are in place; field extraction (entry keyed by numeric field
- * id, names resolved from `$form['fields']`) is the M3 task.
+ * Free tier: attaches the first-party attribution to the entry as entry meta
+ * (visible in the entry detail + exports — no owner config). Paid forwarding to
+ * Apointoo is deferred (contract-gated).
  */
 class Gravity_Forms_Adapter extends Abstract_Form_Adapter {
 
@@ -63,8 +66,20 @@ class Gravity_Forms_Adapter extends Abstract_Form_Adapter {
 	 * @return void
 	 */
 	public function on_after_submission( $entry, $form ) {
-		// @todo M3: walk $form['fields'] to map ids → email/phone, then
-		// $this->capture( rgar( $form, 'id' ), $flat_fields ). See docs/PLAN.md §4.
-		unset( $entry, $form );
+		if ( ! function_exists( 'gform_add_meta' ) || ! is_array( $entry ) ) {
+			return;
+		}
+		$entry_id = isset( $entry['id'] ) ? absint( $entry['id'] ) : 0;
+		if ( ! $entry_id ) {
+			return;
+		}
+		$form_id = ( is_array( $form ) && isset( $form['id'] ) ) ? absint( $form['id'] ) : 0;
+
+		foreach ( Attribution::from_cookie() as $key => $value ) {
+			if ( '' !== $value ) {
+				gform_add_meta( $entry_id, $key, $value, $form_id );
+			}
+		}
+		// @todo Paid tier: build a Lead from the fields + forward to Apointoo.
 	}
 }
