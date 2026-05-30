@@ -258,9 +258,10 @@ add-on); ClickTrail is a separate generic free plugin.
 2. Either way the plugin is **free** — clients pay for the Apointoo service, not the connector. *(This
    supersedes the earlier paid-plugin / Merchant-of-Record framing.)*
 
-**License:** **proprietary** today (private-ZIP default). Switch to **GPLv2-or-later** only if/when wp.org
-accepts it (which open-sources the repo). There is **no paid licensing layer** — the plugin is free, so no
-license key gates updates.
+**License: GPLv2-or-later** (flipped 2026-05-30 to pursue wp.org — requesting directory access + an SVN repo).
+Everything shipped (PHP, JS, CSS, images) is GPL-compatible; the full GNU GPLv2 text is in `LICENSE`. There is
+**no paid licensing layer** — the plugin is free, so no license key gates updates. If the wp.org path is later
+abandoned, the GPL still permits private-ZIP distribution to clients.
 
 **Update mechanism:** if on wp.org, the directory's auto-updates. If private ZIP, either hand the ZIP or a
 version JSON + ZIP from a Vizuh update server via **Plugin Update Checker** (YahnisElsts). No payment gate.

@@ -5,8 +5,8 @@ Requires at least: 6.4
 Tested up to: 6.7
 Requires PHP: 8.0
 Stable tag: 0.1.0
-License: Proprietary
-License URI: https://github.com/vizuh/apointoo-wp-capture/blob/main/LICENSE
+License: GPLv2 or later
+License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
 Connect your existing WordPress forms to Apointoo — server-side, consent-aware lead capture. A capture/wiring adapter, not a form builder.
 
@@ -53,14 +53,12 @@ Cookiebot) and only forwards ad identifiers when marketing consent is granted.
 <!--
   ── INTERNAL NOTE ───────────────────────────────────────────────────────────
   Free capture-and-send connector (the paid product is the Apointoo service).
-  Distribution decided by wordpress.org — see docs/PLAN.md §8:
-    - If wp.org ACCEPTS it: repo goes public + GPLv2-or-later; this readme.txt
-      becomes the live directory listing (switch the License line to GPL).
-    - If wp.org REJECTS / not pursued: private ZIP to clients; repo stays private
-      and proprietary; this readme.txt is kept for the update modal + docs only.
-  wp.org may reject a plugin that mainly connects to an external service.
+  Now licensed GPLv2-or-later to pursue the wordpress.org directory (requesting
+  access + SVN repo). See docs/PLAN.md §8 + docs/WP-ORG-SUBMISSION.md.
 
-  Still to do before real (non-sandbox) PII:
-    - External-service disclosure of the Apointoo SDK data flow (the DPIA documents it).
-    - Build the real transport + the deferred security/privacy gates (issues I1–I4, DPIA R3/R4).
+  Before actually submitting:
+    - It must be production-ready, NOT a stub — build the real transport (M1).
+    - Add the Apointoo Terms-of-Use + privacy-policy links in this readme (G6/G7).
+    - Submit from a Vizuh email, not gmail (trademark / brand-ownership rule).
+    - Bump "Tested up to" to the current WP; confirm "vizuh" is a wp.org username.
 -->
