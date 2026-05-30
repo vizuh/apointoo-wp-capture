@@ -1,0 +1,46 @@
+<?xml version="1.0"?>
+<ruleset name="Apointoo Capture Coding Standards">
+	<description>WordPress baseline with a small PSR-oriented formatting subset.</description>
+
+	<arg name="basepath" value="." />
+	<arg name="extensions" value="php" />
+	<arg value="sp" />
+
+	<file>apointoo-wp-capture.php</file>
+	<file>uninstall.php</file>
+	<file>includes</file>
+
+	<exclude-pattern>*/vendor/*</exclude-pattern>
+	<exclude-pattern>*/tests/*</exclude-pattern>
+	<exclude-pattern>*/assets/*</exclude-pattern>
+
+	<rule ref="WordPress-Core" />
+	<rule ref="WordPress-Extra" />
+	<rule ref="WordPress-Docs" />
+
+	<!-- PSR-oriented readability subset (matches the ClickTrail house style). -->
+	<rule ref="Generic.Formatting.MultipleStatementAlignment" />
+	<rule ref="Squiz.ControlStructures.ControlSignature" />
+
+	<!-- Enforce our text domain on every i18n call. -->
+	<rule ref="WordPress.WP.I18n">
+		<properties>
+			<property name="text_domain" type="array">
+				<element value="apointoo-capture" />
+			</property>
+		</properties>
+	</rule>
+
+	<!-- Enforce unique prefixes on every global symbol (wp.org requirement). -->
+	<rule ref="WordPress.NamingConventions.PrefixAllGlobals">
+		<properties>
+			<property name="prefixes" type="array">
+				<element value="apointoo_capture" />
+				<element value="APOINTOO_CAPTURE" />
+				<element value="Apointoo\Capture" />
+			</property>
+		</properties>
+	</rule>
+
+	<config name="minimum_wp_version" value="6.4" />
+</ruleset>
