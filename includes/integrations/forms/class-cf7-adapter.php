@@ -7,6 +7,8 @@
 
 namespace Apointoo\Capture\Integrations\Forms;
 
+use Apointoo\Capture\Capture\Attribution;
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -52,7 +54,33 @@ class CF7_Adapter extends Abstract_Form_Adapter {
 	 * @return void
 	 */
 	public function register_hooks() {
+		// Free tier: inject attribution as hidden fields (rides the form into the
+		// site owner's own systems — no external call).
+		add_filter( 'wpcf7_form_hidden_fields', array( $this, 'hidden_fields' ) );
+		// Paid tier: capture the submission for forwarding to Apointoo (no-op until
+		// credentials + the transport are wired).
 		add_action( 'wpcf7_mail_sent', array( $this, 'on_mail_sent' ) );
+	}
+
+	/**
+	 * Add the attribution hidden fields to a Contact Form 7 form.
+	 *
+	 * Every managed key is emitted (empty or cookie-filled) so the tracker can
+	 * fill them client-side on the first visit; CF7 then submits them.
+	 *
+	 * @param array<string, string> $fields Existing hidden fields.
+	 * @return array<string, string>
+	 */
+	public function hidden_fields( $fields ) {
+		$fields = is_array( $fields ) ? $fields : array();
+		$attr   = Attribution::from_cookie();
+
+		foreach ( Attribution::keys() as $key ) {
+			$name            = Attribution::PREFIX . $key;
+			$fields[ $name ] = isset( $attr[ $name ] ) ? $attr[ $name ] : '';
+		}
+
+		return $fields;
 	}
 
 	/**

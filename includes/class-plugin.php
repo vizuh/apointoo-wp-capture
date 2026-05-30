@@ -8,6 +8,7 @@
 namespace Apointoo\Capture;
 
 use Apointoo\Capture\Admin\Settings;
+use Apointoo\Capture\Capture\Tracker;
 use Apointoo\Capture\Integrations\Form_Integration_Manager;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -32,6 +33,9 @@ class Plugin {
 	 * @return void
 	 */
 	public function run() {
+		// Free tier: capture attribution first-party + inject into forms.
+		( new Tracker() )->register();
+
 		$this->forms = new Form_Integration_Manager();
 		$this->forms->init();
 
