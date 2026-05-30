@@ -52,10 +52,22 @@ Self-hosted, **not** wordpress.org (proprietary, agency-distributed, calls a pai
 via a Vizuh-controlled update server, gated behind a license key. Two distinct credentials, kept separate:
 a **license key** (gates updates) and a **server secret** (tenant API token, authenticates SDK calls).
 
+## Security & privacy
+
+- **Threat model** (design review): `apointoo-sdk` design family → `_references/capture-security-review.md`.
+  The load-bearing rule: **the publishable key is browser-extractable — assume the publishable path is fully
+  hostile.** Two separate forward paths (§3b of the plan): a visitor proxy that carries only the *publishable*
+  key + telemetry, and a server-side form hook that holds the *secret* and originates all PII/conversion calls.
+  The secret never sits behind a browser route (C1); conversion-eligible events require the secret (C2).
+- **DPIA:** [`docs/dpia.md`](docs/dpia.md). Dominant gaps: real **erasure** (crypto-shred, not just a
+  tombstone) and PII scrubbing of free-form fields **must land before any real (non-sandbox) PII flows.**
+
 ## Open items
 
 - Final license terms (proprietary vs GPL-compatible) — placeholder `LICENSE` is proprietary for now.
 - Update-server / licensing mechanism (Plugin Update Checker vs custom).
+- Build the deferred security mitigations before M1 real-PII: PII scrub on `properties`/`traits` (I2),
+  erasure/crypto-shred path (I3), secret-leak anomaly detection (I4).
 
 ---
 © Vizuh OÜ. Proprietary — see [`LICENSE`](LICENSE).

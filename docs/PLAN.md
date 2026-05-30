@@ -70,22 +70,35 @@ re-pasting a fresh token. Publishable key and server secret are kept distinct in
 Also: SDK base URL (single allowlisted forward host, versioned), per-adapter enable toggles, read-only "last
 forward status" line, and a **license key** field (distribution gate — see §8, kept separate from the secret).
 
-### 3b. First-party REST proxy under `/wp-json` (the ITP survival mechanism)
-`register_rest_route('apointoo/v1', '/capture/(track|identify)')`. A **same-domain, same-IP, server-set**
-endpoint (the site must NOT CNAME it to a third party, or the ITP exemption is lost). The browser tracker
-POSTs here; the proxy injects the server secret server-side and forwards via `wp_remote_post` to the SDK's
-`/capture/track` and `/capture/identify`.
+### 3b. Two separate forward paths — the secret never sits behind a browser route (security review C1)
 
-Two modes:
-- **Public capture** (`track`/`identify`): `permission_callback` returns `__return_true` but is
-  **nonce-protected** (`X-WP-Nonce`/`wp_rest`, CSRF) and **rate-limited per-IP** via transients. Never trusts
-  a key from the browser.
-- **Admin/config** routes: `permission_callback = current_user_can('manage_options')`.
+The single most important security boundary in this plugin: **a site visitor must never be able to reach
+secret-scoped SDK calls.** The plugin therefore has *two physically separate* forward paths, and they use
+*different keys*:
 
-Hardening: strict host allowlist (the one SDK URL), `sanitize_callback`/`validate_callback` on every arg, no
-blind cookie forwarding, `is_wp_error` + status/content-type checks on the upstream response, **fail closed**
-with a clean `WP_Error` that never leaks the secret or raw upstream error. Tight outbound timeout (≤3s, off
-the page-render critical path) because the *primary* capture path is the server-side form hook, not this proxy.
+**Path A — visitor-facing `/wp-json` proxy (publishable key, telemetry only).**
+`register_rest_route('apointoo/v1', '/capture/track')` — **`track` only, no `identify`.** A
+**same-domain, same-IP, server-set** endpoint (the site must NOT CNAME it to a third party, or the ITP
+exemption is lost). The browser tracker POSTs telemetry here; the proxy forwards via `wp_remote_post` to the
+SDK's `/capture/track` **with the publishable key — never the server secret.**
+- `permission_callback` returns `__return_true` but is **nonce-protected** (`X-WP-Nonce`/`wp_rest`) and
+  **rate-limited per-IP** via transients. Never trusts a key from the browser.
+- The proxy **rejects conversion-eligible event names** (`lead_captured`/`outcome`) at the edge — those are
+  not the browser's to send (defense in depth; the SDK also enforces C2). Visitor traffic = telemetry only
+  (`page_view`/`session_start`/`form_view`/`form_step`).
+
+**Path B — server-side form hook (server secret, PII + conversion).** The PHP form-adapter callbacks (§4) run
+**in-process on the server**, hold the server secret, and call the SDK's `/capture/track` (`lead_captured`)
+and `/capture/identify` (hashed PII) directly via `wp_remote_post`. **No browser-reachable route exposes this
+path.** This is where every load-bearing event (the conversion, the identity link, the PII) originates.
+
+**Admin/config** routes: `permission_callback = current_user_can('manage_options')`.
+
+Hardening (both paths): strict host allowlist (**exact scheme+host match** of the one SDK URL — not a
+substring, or `sdk.vizuh.com.evil.com` slips through), `sanitize_callback`/`validate_callback` on every arg,
+no blind cookie forwarding, `is_wp_error` + status/content-type checks on the upstream response, **fail
+closed** with a clean `WP_Error` that never leaks the secret or raw upstream error. Tight outbound timeout
+(≤3s, off the page-render critical path) because the *primary* capture path is Path B, not the proxy.
 
 ### 3c. Enqueued JS tracker (headless)
 Small script (no visible DOM), enqueued site-wide:
@@ -97,9 +110,11 @@ Small script (no visible DOM), enqueued site-wide:
 - **Read & persist attribution.** Parse UTM params, `gclid`/`gbraid`/`wbraid`/`fbclid`/`msclkid` from the URL,
   `document.referrer`, landing page; persist first-touch + last-touch so attribution survives navigation.
   (A `gclid` via `url_passthrough` does NOT imply consent — see §5.)
-- **Emit `page_view`/`form_view`** to the proxy (enrichment path), stamping the current consent snapshot.
+- **Emit telemetry only** (`page_view`/`session_start`/`form_view`/`form_step`) to the Path-A proxy, stamping
+  the current consent snapshot. **Never emits `lead_captured`/`outcome`** — the conversion is the server hook's
+  job (Path B, C2). The lead's existence reaches the SDK from the PHP submit hook, not the browser.
 - **Dedup correlation.** Write a generated submission UUID into a hidden field / read the form plugin's entry
-  id, so server-side capture and any client event correlate.
+  id, so the server-side `lead_captured` (Path B) and the browser's `form_step` telemetry (Path A) correlate.
 
 The tracker is the *secondary/enrichment* channel; it carries no secret and never calls the SDK directly.
 
@@ -110,6 +125,9 @@ Both the tracker and the PHP capture path resolve marketing/`ad_user_data` conse
 the `wp_consent_*` cookies) at forward time.
 
 ## 4. Form adapters
+
+All adapter callbacks run on **Path B** (§3b) — in-process on the server, holding the server secret — so the
+`lead_captured` + `identify` they emit are conversion-eligible/PII calls that never touch a browser route (C1/C2).
 
 Each adapter binds **one PHP action** (server-side = source of truth: fires on non-AJAX/JS-disabled submits,
 immune to ad-blockers, canonical field map) and optionally **one JS event** (enrichment/dedup). Every adapter
