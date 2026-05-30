@@ -52,16 +52,15 @@ Cookiebot) and only forwards ad identifiers when marketing consent is granted.
 
 <!--
   ── INTERNAL NOTE ───────────────────────────────────────────────────────────
-  This is the PAID, off-directory pro product (locked 2026-05-30) — it is NOT
-  submitted to the wordpress.org directory. The free wp.org funnel is ClickTrail
-  (vizuh/click-trail-handler). This readme.txt is kept for the update-info modal
-  and as docs, not for a directory listing. See docs/PLAN.md §8.
+  Free capture-and-send connector (the paid product is the Apointoo service).
+  Distribution decided by wordpress.org — see docs/PLAN.md §8:
+    - If wp.org ACCEPTS it: repo goes public + GPLv2-or-later; this readme.txt
+      becomes the live directory listing (switch the License line to GPL).
+    - If wp.org REJECTS / not pursued: private ZIP to clients; repo stays private
+      and proprietary; this readme.txt is kept for the update modal + docs only.
+  wp.org may reject a plugin that mainly connects to an external service.
 
-  Still to do before real (non-sandbox) PII flows:
-    - License sub-decision: proprietary (current) vs split-GPL — free choice
-      off-directory; does not affect selling.
-    - External-service disclosure of the Apointoo SDK data flow (good practice +
-      MoR/Freemius requirement) — the DPIA already documents it.
-    - Build the real transport + the deferred security/privacy gates
-      (issues I1–I4, DPIA R3/R4).
+  Still to do before real (non-sandbox) PII:
+    - External-service disclosure of the Apointoo SDK data flow (the DPIA documents it).
+    - Build the real transport + the deferred security/privacy gates (issues I1–I4, DPIA R3/R4).
 -->
