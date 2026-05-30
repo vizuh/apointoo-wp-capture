@@ -2,7 +2,7 @@
   "name": "vizuh/apointoo-wp-capture",
   "description": "Connect existing WordPress forms to the Apointoo capture contract. A capture/wiring adapter — not a form builder.",
   "type": "wordpress-plugin",
-  "license": "proprietary",
+  "license": "GPL-2.0-or-later",
   "require": {
     "php": ">=8.0"
   },

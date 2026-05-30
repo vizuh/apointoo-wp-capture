@@ -8,12 +8,21 @@
  * Requires PHP:      8.0
  * Author:            Vizuh OÜ
  * Author URI:        https://vizuh.com
- * License:           Proprietary
+ * License:           GPLv2 or later
+ * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain:       apointoo-capture
  * Domain Path:       /languages
  * Update URI:        false
  *
  * @package Apointoo\Capture
+ *
+ * Apointoo Capture is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License, version 2 or (at your
+ * option) any later version, as published by the Free Software Foundation.
+ *
+ * It is distributed in the hope that it will be useful, but WITHOUT ANY
+ * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+ * A PARTICULAR PURPOSE. See the GNU General Public License for more details.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {

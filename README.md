@@ -51,16 +51,16 @@ Design source of truth (in `vizuh/apointoo-sdk`):
 
 ## Distribution
 
-**A free capture-and-send connector** (refined 2026-05-30). The plugin is free; the paid product is the
-Apointoo **service** (SDK + dashboard). Two paths, decided by wordpress.org:
+**A free, GPLv2-or-later capture-and-send connector** (refined 2026-05-30). The plugin is free; the paid
+product is the Apointoo **service** (SDK + dashboard). We're pursuing the **wordpress.org directory** (license
+flipped to GPL to request access + an SVN repo):
 
-- **wp.org accepts it** → repo goes **public + GPLv2-or-later** (open source); updates via the directory.
-- **wp.org rejects / not pursued** → distribute **privately by ZIP** to clients; repo **stays private** and
-  proprietary.
+- **wp.org accepts it** → also published on GitHub; updates via the directory.
+- **wp.org rejects / not pursued** → distribute by **ZIP** to clients (still GPL).
 
-wordpress.org may reject a plugin that mainly connects to an external service — that's the open risk. Clients
-configure it with credentials issued by the **dashboard** (a publishable site key + a server secret); there is
-no paid license key. Full model + WordPress hardening: `docs/PLAN.md` §8.
+Clients configure it with credentials issued by the **dashboard** (a publishable site key + a server secret);
+there is no paid license key. Full model, hardening, and the grounded pre-submission checklist:
+`docs/PLAN.md` §8 and [`docs/WP-ORG-SUBMISSION.md`](docs/WP-ORG-SUBMISSION.md).
 
 ## Development
 
