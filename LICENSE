@@ -1,0 +1,17 @@
+Copyright (c) 2026 Vizuh OÜ. All rights reserved.
+
+PROPRIETARY — NOT FOR REDISTRIBUTION.
+
+This software and its source code are the confidential and proprietary property
+of Vizuh OÜ. They are provided solely for use by Vizuh OÜ and its authorized
+agency clients under a valid license. No part of this software may be copied,
+modified, distributed, sublicensed, or made publicly available without the prior
+written permission of Vizuh OÜ.
+
+NOTE (open item): final license terms are not yet settled. Because this plugin
+runs inside WordPress (GPL), a GPL-compatible license may be required if the
+plugin is ever distributed publicly. It is currently distributed only privately
+to authorized agency clients via a license-gated update server, under the
+proprietary terms above. Revisit before any public distribution.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.
