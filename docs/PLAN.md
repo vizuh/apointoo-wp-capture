@@ -227,12 +227,24 @@ minimal — paste the credentials the dashboard issues, toggle adapters. It stay
 add-on); ClickTrail is a separate generic free plugin.
 
 **Distribution — two paths, decided by wordpress.org.**
-1. **Try wordpress.org (free directory).** Submit as a free service-connector. wp.org may reject a plugin that
-   mainly connects to an external service — that is the open risk.
-   - **If accepted:** the GitHub repo goes **public + GPLv2-or-later** (wp.org requires GPL; open-sourcing
-     follows), updates via the wp.org SVN trunk.
-   - **If rejected / not pursued:** distribute **privately by ZIP** to clients; the repo **stays private** and
-     the plugin stays **proprietary** (not open-sourced).
+1. **Try wordpress.org (free directory).** SaaS connectors are **explicitly permitted** — Guideline 6:
+   third-party services are fine *if* they provide substantive functionality and the readme links the service's
+   terms of use. So the risk is not "connectors are banned"; it is meeting the connector rules. **wp.org
+   pre-submission checklist** (grounded in the Plugin Directory Guidelines, fetched 2026-05-30):
+   - **Functional at submission (G16).** The plugin must actually capture-and-send. *This blocks submission
+     until the real transport ships (M1+) — a stubbed connector cannot be submitted.*
+   - **Full GPLv2-or-later + human-readable source (G1, G4).** Switch `LICENSE`; **no proprietary/obfuscated
+     JS** — this kills the split-license idea: for wp.org the JS is GPL and readable too.
+   - **readme.txt links the Apointoo terms-of-use + privacy policy (G6).** Required for a service connector.
+   - **Explicit opt-in before contacting the SDK (G7).** Satisfied by credential entry (service registration);
+     nothing phones home until the keys are set — keep + document that.
+   - **Bundle the JS tracker locally (G8).** Never load executable code from the Apointoo domain; data POSTs
+     are fine; non-service JS/CSS must be local.
+   - **No plugin-side paywall (G5 — "no trialware").** All plugin functionality stays free; payment lives on
+     the service, not behind a plugin gate.
+   - **Security review** — sanitise/escape/nonce/capability checks (the WordPress-hardening clause above).
+   - **If accepted:** repo → **public + GPLv2-or-later**, updates via the wp.org SVN trunk.
+   - **If rejected / not pursued:** distribute **privately by ZIP**; repo **stays private + proprietary**.
 2. Either way the plugin is **free** — clients pay for the Apointoo service, not the connector. *(This
    supersedes the earlier paid-plugin / Merchant-of-Record framing.)*
 
