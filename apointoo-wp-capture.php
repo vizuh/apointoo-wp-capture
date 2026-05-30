@@ -1,13 +1,13 @@
 <?php
 /**
  * Plugin Name:       Apointoo Capture
- * Plugin URI:        https://vizuh.com
+ * Plugin URI:        https://apointoo.com
  * Description:       Connects existing WordPress forms to the Apointoo capture contract. A capture/wiring adapter — NOT a form builder.
  * Version:           0.1.0
  * Requires at least: 6.4
  * Requires PHP:      8.0
- * Author:            Vizuh OÜ
- * Author URI:        https://vizuh.com
+ * Author:            Apointoo
+ * Author URI:        https://apointoo.com
  * License:           GPLv2 or later
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain:       apointoo-capture

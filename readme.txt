@@ -1,5 +1,5 @@
 === Apointoo Capture ===
-Contributors: vizuh
+Contributors: apointoo
 Tags: attribution, conversion tracking, forms, consent, leads
 Requires at least: 6.4
 Tested up to: 7.0
@@ -23,6 +23,8 @@ form, a booking, or any submission UI.
 **This plugin connects to the Apointoo SDK, an external service.** It sends
 hashed lead identifiers + attribution to your configured Apointoo tenant endpoint
 so conversions can be measured in Google Ads. See the privacy section below.
+
+Get your credentials and setup instructions from the Apointoo dashboard. Support: support@apointoo.com.
 
 == Installation ==
 

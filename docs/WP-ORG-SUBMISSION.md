@@ -18,10 +18,10 @@ Submitting now burns a 5–14 day review cycle on a guaranteed rejection.
 
 ## Naming & ownership — actionable NOW (independent of code)
 
-- ⚠ **Submit from a Vizuh/Apointoo email, NOT gmail.** "Apointoo Capture" starts with the Vizuh-owned brand
-  "Apointoo" (G17). FAQ, verbatim: *"submitting your official plugin with a user that has a gmail address is
-  likely to be flagged for trademark infringement."* → Hugo's wordpress.org **profile email must be @vizuh.com**
-  (or an Apointoo domain) before submitting; ideally submit from an official org account.
+- ✅ **Account: wp.org username `apointoo`, email `support@apointoo.com`.** The `@apointoo.com` domain matches
+  the plugin brand exactly, proving ownership of "Apointoo" (G17) and avoiding the gmail
+  trademark-infringement flag. `Contributors: apointoo` + the `Author: Apointoo` header are aligned to this.
+  *(Verify the wp.org account is actually registered as `apointoo` with that email before submitting.)*
 - ✅ **Brand-first name, not generic.** "Apointoo Capture" → slug `apointoo-capture` (derived from the
   `Plugin Name` header; **permanent once approved**; changeable once *before* review). Note: the wp.org slug is
   `apointoo-capture`, not the repo name `apointoo-wp-capture`.
