@@ -7,6 +7,7 @@
 
 namespace Apointoo\Capture;
 
+use Apointoo\Capture\Admin\Settings;
 use Apointoo\Capture\Integrations\Form_Integration_Manager;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -33,6 +34,10 @@ class Plugin {
 	public function run() {
 		$this->forms = new Form_Integration_Manager();
 		$this->forms->init();
+
+		if ( is_admin() ) {
+			( new Settings() )->register();
+		}
 
 		/**
 		 * Fires once the capture plugin has booted its subsystems.
