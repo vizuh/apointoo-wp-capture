@@ -26,6 +26,21 @@ so conversions can be measured in Google Ads. See the privacy section below.
 
 Get your credentials and setup instructions from the Apointoo dashboard. Support: support@apointoo.com.
 
+== External service ==
+
+Apointoo Capture connects your site to the **Apointoo service** (the Apointoo SDK), operated by Vizuh OÜ, to
+measure conversions from the forms you already use. The plugin is an interface to that service; the service
+provides the conversion-measurement functionality.
+
+**What is sent, and when.** Only after you enter your Apointoo credentials, and only on a form submission, the
+plugin sends to *your configured Apointoo endpoint*: SHA-256-hashed email/phone identifiers, marketing
+attribution (UTM parameters and ad click IDs), and the visitor's consent state. Raw email and phone are hashed
+on your own server and are never transmitted. Ad identifiers are only forwarded when marketing consent is
+granted. Nothing is sent until you configure the plugin.
+
+* Terms of Use: https://apointoo.com/terms
+* Privacy Policy: https://apointoo.com/privacy
+
 == Installation ==
 
 1. Install and activate the plugin.
@@ -60,7 +75,7 @@ Cookiebot) and only forwards ad identifiers when marketing consent is granted.
 
   Before actually submitting:
     - It must be production-ready, NOT a stub — build the real transport (M1).
-    - Add the Apointoo Terms-of-Use + privacy-policy links in this readme (G6/G7).
-    - Submit from a Vizuh email, not gmail (trademark / brand-ownership rule).
-    - Bump "Tested up to" to the current WP; confirm "vizuh" is a wp.org username.
+    - Make https://apointoo.com/terms and /privacy live pages (the ToU/privacy
+      links above must resolve — G6/G7).
+    - Confirm the wp.org account "apointoo" (support@apointoo.com) is registered.
 -->
