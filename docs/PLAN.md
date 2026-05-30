@@ -219,45 +219,43 @@ Small, reversible steps throughout (sandbox before prod; Hugo sole stakeholder).
 
 ## 8. Distribution & auth
 
-**Locked 2026-05-30 (Hugo): paid, standalone, OFF wordpress.org — the pro half of a freemium funnel.**
+**Refined 2026-05-30 (Hugo): just the plugin — a free capture-and-send connector.** It captures form leads and
+forwards them to the Apointoo SDK; it is *not* the product. The **paid product is the Apointoo service (SDK +
+dashboard)** — the plugin carries no pricing. Everything the client configures (tenant keys, what's captured,
+conversion mappings, setup instructions) lives on the **Apointoo dashboard**; the plugin's settings page is
+minimal — paste the credentials the dashboard issues, toggle adapters. It stays *standalone* (not a ClickTrail
+add-on); ClickTrail is a separate generic free plugin.
 
-**Freemium funnel, two separate products.**
-- **Free top-of-funnel: ClickTrail** (`vizuh/click-trail-handler`) — GPL, on the wordpress.org directory.
-  Generic attribution/consent/forms; useful standalone; earns discovery + installs. Carries a tasteful upsell
-  to Apointoo.
-- **Paid pro: Apointoo Capture** (this plugin) — distributed **off** wordpress.org. It is *standalone*, not a
-  ClickTrail add-on (confirmed 2026-05-30): no code coupling; ClickTrail funnels to it by positioning only.
+**Distribution — two paths, decided by wordpress.org.**
+1. **Try wordpress.org (free directory).** Submit as a free service-connector. wp.org may reject a plugin that
+   mainly connects to an external service — that is the open risk.
+   - **If accepted:** the GitHub repo goes **public + GPLv2-or-later** (wp.org requires GPL; open-sourcing
+     follows), updates via the wp.org SVN trunk.
+   - **If rejected / not pursued:** distribute **privately by ZIP** to clients; the repo **stays private** and
+     the plugin stays **proprietary** (not open-sourced).
+2. Either way the plugin is **free** — clients pay for the Apointoo service, not the connector. *(This
+   supersedes the earlier paid-plugin / Merchant-of-Record framing.)*
 
-**Why off-directory (and why that's correct, not a workaround).** wordpress.org has **no paid marketplace** —
-the directory is free/GPL-only; you cannot sell there. Its guidelines also discourage free-directory plugins
-that are a thin front-end for a paid external service and do nothing alone — which Apointoo Capture is (useless
-without the paid Apointoo SDK). So it belongs off-directory by the rules, not in spite of them; ClickTrail
-(works standalone) is the right free citizen.
+**License:** **proprietary** today (private-ZIP default). Switch to **GPLv2-or-later** only if/when wp.org
+accepts it (which open-sources the repo). There is **no paid licensing layer** — the plugin is free, so no
+license key gates updates.
 
-**Selling (paid, off-directory).** Sell via a **Merchant-of-Record** platform — **Freemius** or **Lemon
-Squeezy** (or Paddle) — which handle EU VAT MOSS + US sales tax for Vizuh OÜ, in-plugin checkout, licensing,
-and freemium analytics. **EDD** is an alternative but is *not* MoR (Vizuh would handle VAT itself). For
-managed clients, install the licensed plugin directly with a key — no marketplace involved.
+**Update mechanism:** if on wp.org, the directory's auto-updates. If private ZIP, either hand the ZIP or a
+version JSON + ZIP from a Vizuh update server via **Plugin Update Checker** (YahnisElsts). No payment gate.
 
-**License (now a free choice — off-wp.org removes the GPL requirement).** GPL is only mandatory for
-wordpress.org-hosted plugins; off-directory it is your call and does **not** prevent selling (premium plugins
-are routinely GPL and sold — you sell updates/support/the SDK connection, not the right to the code). Options:
-keep **proprietary** (current `LICENSE`), or the common premium **split** (PHP = GPLv2-or-later, JS/CSS/assets
-proprietary). *Sub-decision still open; low stakes.*
-
-**Update mechanism:** the MoR platform's updater (Freemius/EDD both ship one) or a version JSON + ZIP from a
-Vizuh-controlled update server via **Plugin Update Checker** (YahnisElsts). The download is **gated behind a
-license key** entered in settings.
-
-**Two distinct credentials, kept separate in UI and contract:**
-- **License key** — gates plugin updates/downloads from the Vizuh update server (EDD-style or lightweight
-  custom licensing). Pure distribution control.
+**Credentials (issued by the dashboard, not invented in the plugin):**
+- **Publishable site key** — client-side; resolves `tenantId` for the browser tracker; grants nothing alone.
 - **Server secret (tenant API token)** — authenticates server-to-server SDK calls (`Authorization: Bearer`,
-  SHA-256-hashed at the SDK per ADR-019). Pure data-plane auth.
+  SHA-256-hashed at the SDK per ADR-019/ADR-021). Server-side only.
 
-**Auth posture to the SDK:** the WP proxy authenticates **as the tenant, server-side only**, via the
-per-tenant revocable API token; the publishable site key resolves `tenantId` for the browser tracker and
-grants nothing on its own. The SDK never trusts a key or token sent from the browser. Because tokens are
-per-tenant, ≤5, revocable, a leaked at-rest secret is cheaply rotated — security rests on rotation + same-server
-S2S calls, not unbreakable at-rest encryption. Agency offboarding = revoke the tenant token and the license
-key, independently.
+**Auth posture to the SDK:** the server-side path authenticates **as the tenant** via the per-tenant revocable
+API token; the publishable key is browser-safe and grants nothing alone. The SDK never trusts a key sent from
+the browser (C1). Tokens are per-tenant and revocable, so a leaked at-rest secret is cheaply rotated. Tenant
+offboarding = revoke the token in the dashboard.
+
+**WordPress hardening — "protect against attackers / injections best we can" (Hugo).** The plugin treats the
+WordPress surface as hostile: every input sanitised, every output escaped; the visitor `/wp-json` route is
+nonce + per-IP rate-limited and **never carries the secret** (C1); conversion + PII calls are server-side only
+(C2); the settings screen is `manage_options`-gated with nonces; ABSPATH guard on every file; no `eval` /
+dynamic includes; prepared statements for any DB access; PII hashed in PHP and discarded (B5). The full threat
+model and the open hardening items live in `capture-security-review.md` and repo issue #6.
