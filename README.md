@@ -51,9 +51,16 @@ Design source of truth (in `vizuh/apointoo-sdk`):
 
 ## Distribution
 
-Self-hosted, **not** wordpress.org (proprietary, agency-distributed, calls a paid first-party SDK). Updates
-via a Vizuh-controlled update server, gated behind a license key. Two distinct credentials, kept separate:
-a **license key** (gates updates) and a **server secret** (tenant API token, authenticates SDK calls).
+**Paid, standalone, off wordpress.org** — the pro half of a freemium funnel (locked 2026-05-30). The free
+top-of-funnel is **ClickTrail** (`vizuh/click-trail-handler`, GPL, on the wp.org directory); this paid plugin
+is distributed off-directory via a **Merchant-of-Record** platform (Freemius / Lemon Squeezy — they handle EU
+VAT for Vizuh OÜ), or installed directly on managed clients with a license key. wordpress.org has no paid
+marketplace, and a thin front-end for a paid SDK doesn't belong in the free directory anyway — so off-directory
+is correct, not a workaround.
+
+Two distinct credentials, kept separate: a **license key** (gates updates) and a **server secret** (tenant API
+token, authenticates SDK calls). License is a free choice off-directory (proprietary or split-GPL) and does not
+prevent selling — sub-decision still open; see `docs/PLAN.md` §8.
 
 ## Development
 
