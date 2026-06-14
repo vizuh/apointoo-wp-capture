@@ -24,3 +24,6 @@ Thumbs.db
 # PHP tooling
 .phpunit.result.cache
 /coverage/
+
+# spec-kit ephemeral state (current active feature directory)
+.specify/feature.json
