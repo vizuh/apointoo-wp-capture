@@ -97,6 +97,13 @@ class Settings {
 			self::PAGE,
 			'apointoo_capture_connection'
 		);
+
+		add_settings_section(
+			'apointoo_capture_forms',
+			__( 'Form integrations', 'apointoo-capture' ),
+			array( $this, 'section_forms' ),
+			self::PAGE
+		);
 	}
 
 	/**
@@ -111,6 +118,53 @@ class Settings {
 			'apointoo-capture'
 		);
 		echo '</p>';
+	}
+
+	/**
+	 * Form-integration diagnostic.
+	 *
+	 * Lists the supported form plugins and whether each is active, so the owner can
+	 * confirm attribution is wired. Catches the silent-capture failure mode: an
+	 * "Not installed" plugin will not carry attribution on its submissions.
+	 *
+	 * @return void
+	 */
+	public function section_forms() {
+		$detected = array(
+			'Contact Form 7' => class_exists( 'WPCF7' ),
+			'Gravity Forms'  => class_exists( 'GFForms' ),
+			'WPForms'        => function_exists( 'wpforms' ) || class_exists( 'WPForms\\WPForms' ),
+			'Fluent Forms'   => defined( 'FLUENTFORM' ) || function_exists( 'wpFluentForm' ),
+			'Elementor'      => did_action( 'elementor/loaded' ) || class_exists( 'ElementorPro\\Plugin' ),
+			'Ninja Forms'    => class_exists( 'Ninja_Forms' ),
+		);
+
+		echo '<p>';
+		echo esc_html__(
+			'Attribution rides supported forms as hidden fields (filled in the browser, with a server-side fallback) and is also stored with each submission. Active plugins below are wired automatically.',
+			'apointoo-capture'
+		);
+		echo '</p>';
+
+		echo '<table class="widefat striped" style="max-width:520px"><tbody>';
+		$any = false;
+		foreach ( $detected as $label => $active ) {
+			$any = $any || $active;
+			echo '<tr><td>' . esc_html( $label ) . '</td><td>';
+			if ( $active ) {
+				echo '<strong style="color:#008a20">' . esc_html__( 'Detected — capturing', 'apointoo-capture' ) . '</strong>';
+			} else {
+				echo '<span style="color:#646970">' . esc_html__( 'Not installed', 'apointoo-capture' ) . '</span>';
+			}
+			echo '</td></tr>';
+		}
+		echo '</tbody></table>';
+
+		if ( ! $any ) {
+			echo '<p><em>';
+			echo esc_html__( 'No supported form plugin detected yet. Attribution is still captured and stored; it will ride a form once one of the plugins above is active.', 'apointoo-capture' );
+			echo '</em></p>';
+		}
 	}
 
 	/**

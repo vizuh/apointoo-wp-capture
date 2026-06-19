@@ -4,7 +4,7 @@ Tags: attribution, conversion tracking, forms, consent, leads
 Requires at least: 6.4
 Tested up to: 7.0
 Requires PHP: 8.0
-Stable tag: 0.1.0
+Stable tag: 0.2.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -13,7 +13,7 @@ Connect your existing WordPress forms to Apointoo — server-side, consent-aware
 == Description ==
 
 Apointoo Capture forwards leads from the forms you already use (Contact Form 7,
-WPForms, Gravity Forms, Elementor Pro, Fluent Forms) to the Apointoo capture
+WPForms, Gravity Forms, Elementor Pro, Fluent Forms, Ninja Forms) to the Apointoo capture
 contract — server-side, consent-aware, with email/phone hashed before they leave
 your site.
 
@@ -61,6 +61,12 @@ Yes. It reads your existing consent plugin (WP Consent API / Complianz /
 Cookiebot) and only forwards ad identifiers when marketing consent is granted.
 
 == Changelog ==
+
+= 0.2.0 =
+* Capture engine rewrite (forms-bridge parity): expanded click-ID coverage (Google, Microsoft, Meta, TikTok, X, LinkedIn, Snapchat, Pinterest, Reddit, DV360) plus utm_id; unsubstituted ad-macro rejection; first-touch and last-touch; referrer-based source/medium/channel; bot filtering; cookie + sessionStorage + localStorage persistence.
+* Consent: two-phase capture — attribution is buffered and only persisted/injected once marketing consent is granted (Google Consent Mode, Cookiebot, OneTrust, Complianz, or the WP Consent API), with a late-grant listener; denial clears it. Defaults to auto (gates when a consent platform is present, captures immediately when none is).
+* Cross-domain link decoration: carries UTMs and click IDs across to an approved booking/checkout domain or subdomain (skipping tel/mailto/signed URLs), re-applied as the DOM changes.
+* Forms: hidden-field fill across forms (re-applied to dynamically-added forms), a server-side fallback for Contact Form 7 when the browser could not fill the fields, and a new Ninja Forms adapter. A "Form integrations" panel in Settings shows which form plugins are detected and capturing.
 
 = 0.1.0 =
 * Initial scaffold: form-adapter framework (CF7 working; WPForms/Gravity/
