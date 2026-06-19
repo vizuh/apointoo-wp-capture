@@ -57,9 +57,41 @@ class CF7_Adapter extends Abstract_Form_Adapter {
 		// Free tier: inject attribution as hidden fields (rides the form into the
 		// site owner's own systems — no external call).
 		add_filter( 'wpcf7_form_hidden_fields', array( $this, 'hidden_fields' ) );
+		// Server-side fallback: backfill the hidden fields from the cookie when the
+		// tracker could not fill them (JS off, or a cached page served stale markup),
+		// so the email / feeds still carry attribution.
+		add_filter( 'wpcf7_posted_data', array( $this, 'backfill_posted_data' ) );
 		// Paid tier: capture the submission for forwarding to Apointoo (no-op until
 		// credentials + the transport are wired).
 		add_action( 'wpcf7_mail_sent', array( $this, 'on_mail_sent' ) );
+	}
+
+	/**
+	 * Server-side fallback: backfill the attribution hidden fields from the cookie
+	 * when the client-side tracker did not fill them. Only empty/missing fields are
+	 * filled, so a real client value is never overwritten.
+	 *
+	 * @param array<string, mixed> $posted Posted CF7 data.
+	 * @return array<string, mixed>
+	 */
+	public function backfill_posted_data( $posted ) {
+		if ( ! is_array( $posted ) ) {
+			return $posted;
+		}
+
+		foreach ( Attribution::from_cookie() as $name => $value ) {
+			if ( '' === $value ) {
+				continue;
+			}
+			$current = isset( $posted[ $name ] )
+				? ( is_array( $posted[ $name ] ) ? implode( '', $posted[ $name ] ) : (string) $posted[ $name ] )
+				: '';
+			if ( '' === $current ) {
+				$posted[ $name ] = $value;
+			}
+		}
+
+		return $posted;
 	}
 
 	/**
