@@ -43,16 +43,80 @@ class Tracker {
 
 		wp_add_inline_script(
 			'apointoo-capture-tracker',
-			'window.ApointooCaptureConfig=' . wp_json_encode(
-				array(
-					'cookie' => Attribution::COOKIE,
-					'prefix' => Attribution::PREFIX,
-					'keys'   => Attribution::keys(),
-				)
-			) . ';',
+			'window.ApointooCaptureConfig=' . wp_json_encode( $this->config() ) . ';',
 			'before'
 		);
 
 		wp_enqueue_script( 'apointoo-capture-tracker' );
+	}
+
+	/**
+	 * Build the ApointooCaptureConfig object consumed by tracker.js.
+	 *
+	 * Every list is single-sourced from Attribution so the JS and PHP contracts
+	 * cannot drift. Consent is single-sourced from Consent::client_config().
+	 *
+	 * @return array<string, mixed>
+	 */
+	private function config() {
+		return array(
+			'cookie'         => Attribution::COOKIE,
+			'prefix'         => Attribution::PREFIX,
+			'keys'           => Attribution::keys(),
+			'clickIds'       => Attribution::click_ids(),
+			'utms'           => Attribution::utms(),
+			'firstTouchKeys' => Attribution::first_touch_keys(),
+			'consent'        => Consent::client_config(),
+			'decoration'     => array(
+				'enabled'        => $this->decoration_enabled(),
+				'allowedDomains' => $this->allowed_domains(),
+			),
+		);
+	}
+
+	/**
+	 * Whether link decoration is enabled (default true).
+	 *
+	 * @return bool
+	 */
+	private function decoration_enabled() {
+		/**
+		 * Filter whether outbound-link decoration is enabled.
+		 *
+		 * @param bool $enabled Default true.
+		 */
+		return (bool) apply_filters( 'apointoo_capture_decoration_enabled', true );
+	}
+
+	/**
+	 * The host strings decoration is allowed to append attribution to.
+	 *
+	 * @return string[]
+	 */
+	private function allowed_domains() {
+		$domains = get_option( 'apointoo_capture_allowed_domains', array() );
+		if ( ! is_array( $domains ) ) {
+			$domains = array();
+		}
+
+		/**
+		 * Filter the outbound hosts decoration may append attribution to.
+		 *
+		 * @param string[] $domains List of host strings.
+		 */
+		$domains = apply_filters( 'apointoo_capture_allowed_domains', $domains );
+
+		$hosts = array();
+		foreach ( (array) $domains as $domain ) {
+			if ( ! is_scalar( $domain ) ) {
+				continue;
+			}
+			$host = trim( (string) $domain );
+			if ( '' !== $host ) {
+				$hosts[] = $host;
+			}
+		}
+
+		return array_values( $hosts );
 	}
 }
