@@ -15,13 +15,19 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Reads the site's marketing/ad consent at forward time.
  *
  * We never present a banner — we read the tenant's existing CMP. Resolution order:
- * WP Consent API → CMP-native globals (handled client-side) → `wp_consent_*` cookies.
- * Forwarding an ad identifier is itself the `ad_user_data` action, so it is gated here.
+ * WP Consent API -> CMP-native globals (handled client-side) -> `wp_consent_*`
+ * cookies. Forwarding an ad identifier is itself the `ad_user_data` action, so it
+ * is gated here for server-side use.
+ *
+ * The client-side tracker resolves consent in the browser (Google Consent Mode,
+ * Cookiebot, OneTrust, Complianz, or the `wp_consent_marketing` cookie). It only
+ * needs to know the desired posture, which is single-sourced through
+ * {@see Consent::client_config()} so class-tracker.php and the JS never drift.
  */
 class Consent {
 
 	/**
-	 * Is marketing/ad consent granted for this request?
+	 * Is marketing/ad consent granted for this request? (server-side gate)
 	 *
 	 * @return bool
 	 */
@@ -46,5 +52,35 @@ class Consent {
 		 * @param bool $allowed Whether marketing is allowed by default.
 		 */
 		return (bool) apply_filters( 'apointoo_capture_default_marketing_consent', false );
+	}
+
+	/**
+	 * Client-side consent posture for ApointooCaptureConfig.
+	 *
+	 * The tracker auto-detects the active CMP; this only tells it whether to gate
+	 * persistence on a marketing grant. `require` is one of 'auto' | 'always' |
+	 * 'never'; `source` is always 'auto' (the JS picks the CMP it finds).
+	 *
+	 * @return array{require:string, source:string}
+	 */
+	public static function client_config() {
+		$mode = get_option( 'apointoo_capture_consent_mode', 'auto' );
+
+		/**
+		 * Filter the client-side consent mode.
+		 *
+		 * @param string $mode One of 'auto' | 'always' | 'never'.
+		 */
+		$mode = apply_filters( 'apointoo_capture_consent_mode', $mode );
+
+		$mode = is_string( $mode ) ? strtolower( trim( $mode ) ) : 'auto';
+		if ( ! in_array( $mode, array( 'auto', 'always', 'never' ), true ) ) {
+			$mode = 'auto';
+		}
+
+		return array(
+			'require' => $mode,
+			'source'  => 'auto',
+		);
 	}
 }

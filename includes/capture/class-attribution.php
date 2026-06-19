@@ -15,7 +15,12 @@ if ( ! defined( 'ABSPATH' ) ) {
  * The neutral marketing memory captured first-party and injected into the site's
  * forms as hidden fields. Field names are prefixed `apointoo_` so the site owner
  * can map them in their own CRM / email. Identity keys (`visitor_id`/`session_id`)
- * carry the center's neutral `vis_`/`ses_` ids (A1/B1); nothing here is PII.
+ * carry the center's neutral ids; nothing here is PII.
+ *
+ * This is the single source of truth for the shared capture contract: the field
+ * key list, the click-id subset, the UTM subset and the first-touch subset. The
+ * tracker (class-tracker.php) localises these lists into ApointooCaptureConfig so
+ * the JS and PHP never drift apart.
  */
 class Attribution {
 
@@ -23,34 +28,125 @@ class Attribution {
 	const PREFIX = 'apointoo_';
 
 	/**
-	 * The hidden-field keys the plugin manages (without the prefix).
+	 * Click-id query parameters captured from inbound URLs.
+	 *
+	 * @var string[]
+	 */
+	private const CLICK_IDS = array(
+		'gclid',
+		'gbraid',
+		'wbraid',
+		'fbclid',
+		'msclkid',
+		'ttclid',
+		'twclid',
+		'li_fat_id',
+		'sccid',
+		'epik',
+		'rdt_cid',
+		'dclid',
+	);
+
+	/**
+	 * UTM query parameters captured from inbound URLs.
+	 *
+	 * @var string[]
+	 */
+	private const UTMS = array(
+		'utm_source',
+		'utm_medium',
+		'utm_campaign',
+		'utm_term',
+		'utm_content',
+		'utm_id',
+	);
+
+	/**
+	 * First-touch fields persisted across the visitor's lifetime.
+	 *
+	 * @var string[]
+	 */
+	private const FIRST_TOUCH_KEYS = array(
+		'ft_source',
+		'ft_medium',
+		'ft_campaign',
+		'ft_landing_page',
+	);
+
+	/**
+	 * The hidden-field keys the plugin manages (without the prefix), in contract
+	 * order: identity, utm, click_ids, context, derived, first_touch.
 	 *
 	 * @return string[]
 	 */
 	public static function keys() {
-		return array(
-			'visitor_id',
-			'session_id',
-			'utm_source',
-			'utm_medium',
-			'utm_campaign',
-			'utm_term',
-			'utm_content',
-			'gclid',
-			'gbraid',
-			'wbraid',
-			'fbclid',
-			'msclkid',
-			'referrer',
-			'landing_page',
+		return array_merge(
+			// identity.
+			array(
+				'visitor_id',
+				'session_id',
+			),
+			// utm.
+			self::UTMS,
+			// click_ids.
+			self::CLICK_IDS,
+			// context.
+			array(
+				'referrer',
+				'landing_page',
+			),
+			// derived.
+			array(
+				'source',
+				'medium',
+				'channel',
+			),
+			// first_touch.
+			array(
+				'ft_source',
+				'ft_medium',
+				'ft_campaign',
+				'ft_landing_page',
+				'ft_timestamp',
+			)
 		);
+	}
+
+	/**
+	 * Click-id keys (the 12 click_ids from the contract).
+	 *
+	 * @return string[]
+	 */
+	public static function click_ids() {
+		return self::CLICK_IDS;
+	}
+
+	/**
+	 * UTM keys (the 6 utms from the contract).
+	 *
+	 * @return string[]
+	 */
+	public static function utms() {
+		return self::UTMS;
+	}
+
+	/**
+	 * First-touch keys promoted into hidden fields (the contract subset, without
+	 * the timestamp which is bookkeeping only).
+	 *
+	 * @return string[]
+	 */
+	public static function first_touch_keys() {
+		return self::FIRST_TOUCH_KEYS;
 	}
 
 	/**
 	 * Read the first-party attribution cookie into a flat, prefixed field map.
 	 *
 	 * The cookie is written by the front-end tracker; it is untrusted, so it is
-	 * JSON-decoded and every field is sanitised individually.
+	 * JSON-decoded and every known field is sanitised individually. Unsubstituted
+	 * ad-platform macros (e.g. `{{campaign.name}}`) are rejected, and values are
+	 * capped to 256 characters.
 	 *
 	 * @return array<string, string> Map of `apointoo_<key>` => value (set keys only).
 	 */
@@ -68,9 +164,28 @@ class Attribution {
 		}
 
 		foreach ( self::keys() as $key ) {
-			if ( isset( $data[ $key ] ) && is_scalar( $data[ $key ] ) ) {
-				$out[ self::PREFIX . $key ] = sanitize_text_field( (string) $data[ $key ] );
+			if ( ! isset( $data[ $key ] ) || ! is_scalar( $data[ $key ] ) ) {
+				continue;
 			}
+
+			$clean = sanitize_text_field( (string) $data[ $key ] );
+			if ( '' === $clean ) {
+				continue;
+			}
+
+			// Reject unsubstituted ad-platform dynamic parameter macros, e.g.
+			// Facebook {{campaign.name}}, {{adset.name}}, {{ad.name}} — these
+			// appear literally in URLs when not served through the ad platform.
+			if ( preg_match( '/^\{\{.+\}\}$/', $clean ) ) {
+				continue;
+			}
+
+			// Cap to 256 characters to match the client-side sanitiser.
+			if ( strlen( $clean ) > 256 ) {
+				$clean = substr( $clean, 0, 256 );
+			}
+
+			$out[ self::PREFIX . $key ] = $clean;
 		}
 
 		return $out;
