@@ -4,7 +4,7 @@ Tags: attribution, conversion tracking, forms, consent, leads
 Requires at least: 6.4
 Tested up to: 7.0
 Requires PHP: 8.0
-Stable tag: 0.3.0
+Stable tag: 0.4.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -61,6 +61,10 @@ Yes. It reads your existing consent plugin (WP Consent API / Complianz /
 Cookiebot) and only forwards ad identifiers when marketing consent is granted.
 
 == Changelog ==
+
+= 0.4.0 =
+* All form adapters now forward to Apointoo: Gravity Forms, Fluent Forms, Elementor Pro Forms, and Ninja Forms wired with the same intake-forward path as CF7 and WPForms. Ninja Forms forwarding is now independent of the Save action.
+
 
 = 0.3.0 =
 * WPForms forwarding is now observable: each submission's result (HTTP status, error body, whether email/phone and attribution were captured) is recorded to a "Recent forwards" table in Settings → Apointoo Capture.
