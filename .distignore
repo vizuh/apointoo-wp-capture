@@ -20,6 +20,15 @@ vendor/
 docs/
 README.md
 
+# AI assistant + spec-kit tooling (never ships in a production plugin)
+.claude/
+.specify/
+CLAUDE.md
+
+# Build scripts (shell scripts trip Plugin Check's "application files" rule)
+bin/
+
 # Build artefacts
+build/
 dist/
 *.zip
