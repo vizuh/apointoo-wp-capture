@@ -30,7 +30,7 @@ class WPForms_Adapter extends Abstract_Form_Adapter {
 	 * @return bool
 	 */
 	public function is_active() {
-		return class_exists( 'WPForms' );
+		return function_exists( 'wpforms' ) || class_exists( 'WPForms\\WPForms' ) || class_exists( 'WPForms' );
 	}
 
 	/**
