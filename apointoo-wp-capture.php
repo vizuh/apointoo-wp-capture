@@ -3,7 +3,7 @@
  * Plugin Name:       Apointoo Capture
  * Plugin URI:        https://apointoo.com
  * Description:       Connects existing WordPress forms to the Apointoo capture contract. A capture/wiring adapter — NOT a form builder.
- * Version:           0.2.0
+ * Version:           0.3.0
  * Requires at least: 6.4
  * Requires PHP:      8.0
  * Author:            Apointoo
@@ -27,7 +27,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit; // No direct access.
 }
 
-define( 'APOINTOO_CAPTURE_VERSION', '0.2.0' );
+define( 'APOINTOO_CAPTURE_VERSION', '0.3.0' );
 define( 'APOINTOO_CAPTURE_DIR', plugin_dir_path( __FILE__ ) );
 define( 'APOINTOO_CAPTURE_URL', plugin_dir_url( __FILE__ ) );
 define( 'APOINTOO_CAPTURE_BASENAME', plugin_basename( __FILE__ ) );
@@ -64,6 +64,13 @@ function apointoo_capture_bootstrap() {
 }
 
 apointoo_capture_bootstrap();
+
+/**
+ * Set first-run redirect flag on activation (ADR-001).
+ */
+register_activation_hook( __FILE__, function () {
+	add_option( 'apointoo_capture_activation_redirect', true );
+} );
 
 /**
  * Initialise the plugin once WordPress is ready.

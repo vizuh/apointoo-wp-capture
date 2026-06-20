@@ -152,7 +152,7 @@ abstract class Abstract_Form_Adapter implements Form_Adapter_Interface {
 	 * @param string[] $hints Substrings to look for.
 	 * @return bool
 	 */
-	private function key_matches( $key, array $hints ) {
+	protected function key_matches( $key, array $hints ) {
 		foreach ( $hints as $hint ) {
 			if ( false !== strpos( $key, $hint ) ) {
 				return true;
