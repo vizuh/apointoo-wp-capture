@@ -246,6 +246,7 @@ class Settings {
 			'Fluent Forms'   => defined( 'FLUENTFORM' ) || function_exists( 'wpFluentForm' ),
 			'Elementor'      => did_action( 'elementor/loaded' ) || class_exists( 'ElementorPro\\Plugin' ),
 			'Ninja Forms'    => class_exists( 'Ninja_Forms' ),
+			'Kadence Blocks' => defined( 'KADENCE_BLOCKS_VERSION' ),
 		);
 
 		echo '<p>';

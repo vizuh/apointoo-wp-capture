@@ -4,7 +4,7 @@ Tags: attribution, conversion tracking, forms, consent, leads
 Requires at least: 6.4
 Tested up to: 7.0
 Requires PHP: 8.0
-Stable tag: 0.4.2
+Stable tag: 0.4.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -61,6 +61,9 @@ Yes. It reads your existing consent plugin (WP Consent API / Complianz /
 Cookiebot) and only forwards ad identifiers when marketing consent is granted.
 
 == Changelog ==
+
+= 0.4.3 =
+* Add Kadence Blocks support: both the Advanced Form and the legacy Form block now forward submissions to Apointoo. Lead fields are matched by label as well as type, so a plain-text "Telefone"/phone field is still captured.
 
 = 0.4.2 =
 * Packaging: the distributed build now excludes development tooling (spec-kit, AI assistant config, build/CI files) and wraps the plugin in a correctly-named folder, so installs resolve to the `apointoo-capture` slug and the text domain matches.
