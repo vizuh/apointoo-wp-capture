@@ -4,7 +4,7 @@ Tags: attribution, conversion tracking, forms, consent, leads
 Requires at least: 6.4
 Tested up to: 7.0
 Requires PHP: 8.0
-Stable tag: 0.4.1
+Stable tag: 0.4.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -61,6 +61,10 @@ Yes. It reads your existing consent plugin (WP Consent API / Complianz /
 Cookiebot) and only forwards ad identifiers when marketing consent is granted.
 
 == Changelog ==
+
+= 0.4.2 =
+* Packaging: the distributed build now excludes development tooling (spec-kit, AI assistant config, build/CI files) and wraps the plugin in a correctly-named folder, so installs resolve to the `apointoo-capture` slug and the text domain matches.
+* Silence a false-positive nonce notice on the first-activation redirect (a read-only check of WordPress core's bulk-activation query var; no form data is processed).
 
 = 0.4.1 =
 * Fix WPForms hook not registering on WPForms Lite: `is_active()` now uses `function_exists('wpforms')` (matching the settings-screen detection) instead of `class_exists('WPForms')` which returns false on Lite.

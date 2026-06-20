@@ -51,6 +51,7 @@ class Settings {
 			return;
 		}
 		delete_option( 'apointoo_capture_activation_redirect' );
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only presence check of WP core's bulk-activation query var; no form data is processed.
 		if ( isset( $_GET['activate-multi'] ) ) {
 			return;
 		}
