@@ -4,7 +4,7 @@ Tags: attribution, conversion tracking, forms, consent, leads
 Requires at least: 6.4
 Tested up to: 7.0
 Requires PHP: 8.0
-Stable tag: 0.2.0
+Stable tag: 0.3.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -61,6 +61,13 @@ Yes. It reads your existing consent plugin (WP Consent API / Complianz /
 Cookiebot) and only forwards ad identifiers when marketing consent is granted.
 
 == Changelog ==
+
+= 0.3.0 =
+* WPForms forwarding is now observable: each submission's result (HTTP status, error body, whether email/phone and attribution were captured) is recorded to a "Recent forwards" table in Settings → Apointoo Capture.
+* New "Send test lead" button posts a dummy lead to your intake endpoint and shows the exact response inline — confirms the key, endpoint, and tenant in one click.
+* The forward is now a blocking request so failures are caught and logged instead of silently discarded; submissions with no email or phone are skipped with an explicit reason (the intake API requires at least one).
+* Hardened lead-field extraction (type-first, with email-shape and phone-shape fallbacks) so a mislabeled field still maps correctly.
+* Optional "Debug logging" toggle (or the APOINTOO_CAPTURE_DEBUG constant) mirrors each forward to the PHP error log.
 
 = 0.2.0 =
 * Capture engine rewrite (forms-bridge parity): expanded click-ID coverage (Google, Microsoft, Meta, TikTok, X, LinkedIn, Snapchat, Pinterest, Reddit, DV360) plus utm_id; unsubstituted ad-macro rejection; first-touch and last-touch; referrer-based source/medium/channel; bot filtering; cookie + sessionStorage + localStorage persistence.

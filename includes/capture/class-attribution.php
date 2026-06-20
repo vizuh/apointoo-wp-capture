@@ -141,6 +141,51 @@ class Attribution {
 	}
 
 	/**
+	 * Build the attribution object expected by the Apointoo intake API.
+	 *
+	 * Reads the same first-party cookie and maps snake_case keys → camelCase,
+	 * stripping the `apointoo_` prefix. Returns only set keys so the intake
+	 * route never receives null-valued attribution fields.
+	 *
+	 * @return array<string, string>
+	 */
+	public static function to_intake_payload() {
+		$cookie = self::from_cookie();
+		$map    = array(
+			'apointoo_gclid'        => 'gclid',
+			'apointoo_gbraid'       => 'gbraid',
+			'apointoo_wbraid'       => 'wbraid',
+			'apointoo_fbclid'       => 'fbclid',
+			'apointoo_msclkid'      => 'msclkid',
+			'apointoo_ttclid'       => 'ttclid',
+			'apointoo_twclid'       => 'twclid',
+			'apointoo_li_fat_id'    => 'liFatId',
+			'apointoo_rdt_cid'      => 'rdtCid',
+			'apointoo_dclid'        => 'dclid',
+			'apointoo_utm_source'   => 'utmSource',
+			'apointoo_utm_medium'   => 'utmMedium',
+			'apointoo_utm_campaign' => 'utmCampaign',
+			'apointoo_utm_term'     => 'utmTerm',
+			'apointoo_utm_content'  => 'utmContent',
+			'apointoo_utm_id'       => 'utmId',
+			'apointoo_referrer'     => 'referrer',
+			'apointoo_landing_page' => 'pageUrl',
+			'apointoo_ft_source'    => 'ft_source',
+			'apointoo_ft_medium'    => 'ft_medium',
+			'apointoo_ft_campaign'  => 'ft_campaign',
+		);
+
+		$out = array();
+		foreach ( $map as $cookie_key => $intake_key ) {
+			if ( isset( $cookie[ $cookie_key ] ) ) {
+				$out[ $intake_key ] = $cookie[ $cookie_key ];
+			}
+		}
+
+		return $out;
+	}
+
+	/**
 	 * Read the first-party attribution cookie into a flat, prefixed field map.
 	 *
 	 * The cookie is written by the front-end tracker; it is untrusted, so it is
