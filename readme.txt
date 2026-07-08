@@ -4,7 +4,7 @@ Tags: attribution, conversion tracking, forms, consent, leads
 Requires at least: 6.4
 Tested up to: 7.0
 Requires PHP: 8.0
-Stable tag: 0.4.3
+Stable tag: 0.5.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -13,30 +13,29 @@ Connect your existing WordPress forms to Apointoo — server-side, consent-aware
 == Description ==
 
 Apointoo Capture forwards leads from the forms you already use (Contact Form 7,
-WPForms, Gravity Forms, Elementor Pro, Fluent Forms, Ninja Forms) to the Apointoo capture
-contract — server-side, consent-aware, with email/phone hashed before they leave
-your site.
+WPForms, Gravity Forms, Elementor Pro, Fluent Forms, Ninja Forms, and Kadence Blocks) to
+the Apointoo dashboard contact intake — server-side and consent-aware.
 
 It adapts to forms that already exist; it never creates, renders, or manages a
 form, a booking, or any submission UI.
 
-**This plugin connects to the Apointoo SDK, an external service.** It sends
-hashed lead identifiers + attribution to your configured Apointoo tenant endpoint
-so conversions can be measured in Google Ads. See the privacy section below.
+**This plugin connects to the Apointoo dashboard, an external service.** It sends
+contact fields plus consent-aware attribution to your configured tenant endpoint.
+The dashboard owns Google Ads normalization, hashing, deduplication, and upload.
 
 Get your credentials and setup instructions from the Apointoo dashboard. Support: support@apointoo.com.
 
 == External service ==
 
-Apointoo Capture connects your site to the **Apointoo service** (the Apointoo SDK), operated by Vizuh OÜ, to
+Apointoo Capture connects your site to the **Apointoo service**, operated by Vizuh OÜ, to
 measure conversions from the forms you already use. The plugin is an interface to that service; the service
 provides the conversion-measurement functionality.
 
 **What is sent, and when.** Only after you enter your Apointoo credentials, and only on a form submission, the
-plugin sends to *your configured Apointoo endpoint*: SHA-256-hashed email/phone identifiers, marketing
-attribution (UTM parameters and ad click IDs), and the visitor's consent state. Raw email and phone are hashed
-on your own server and are never transmitted. Ad identifiers are only forwarded when marketing consent is
-granted. Nothing is sent until you configure the plugin.
+plugin sends to *your configured Apointoo endpoint*: the contact fields required to operate the lead,
+marketing attribution, and the visitor's consent state. Ad identifiers are only forwarded when marketing
+consent is granted; UTMs and first-party journey context remain available. Google match identifiers are
+normalized and hashed by the dashboard. Nothing is sent until you configure the plugin.
 
 * Terms of Use: https://apointoo.com/terms
 * Privacy Policy: https://apointoo.com/privacy
@@ -52,8 +51,8 @@ granted. Nothing is sent until you configure the plugin.
 
 = Does it store personal data on my site? =
 
-No. Raw email/phone are hashed (SHA-256) in PHP and discarded; only hashes are
-forwarded. Captured data lives in the Apointoo ledger, not in WordPress.
+No lead inbox is created in WordPress. Contact fields are forwarded server-to-server
+to the configured Apointoo tenant and stored under that tenant's retention policy.
 
 = Does it respect consent? =
 
@@ -61,6 +60,11 @@ Yes. It reads your existing consent plugin (WP Consent API / Complianz /
 Cookiebot) and only forwards ad identifiers when marketing consent is granted.
 
 == Changelog ==
+
+= 0.5.0 =
+* Add stable ft_channel/lt_channel buckets and window.apointooTracking() for integrations that need the full captured attribution record.
+* Consolidate all seven form adapters on one intake sender and attach the dashboard Consent Mode v2 vector while stripping ad IDs unless marketing consent is granted.
+* Align the public privacy disclosure with the live dashboard intake and hashing path.
 
 = 0.4.3 =
 * Add Kadence Blocks support: both the Advanced Form and the legacy Form block now forward submissions to Apointoo. Lead fields are matched by label as well as type, so a plain-text "Telefone"/phone field is still captured.

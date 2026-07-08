@@ -126,23 +126,19 @@ class WPForms_Adapter extends Abstract_Form_Adapter {
 	}
 
 	/**
-	 * Forward the submission to the Apointoo intake endpoint when credentials are set.
+	 * Extract name/email/phone/message from WPForms field objects (type + label hint)
+	 * and forward to the intake API.
 	 *
-	 * Fire-and-forget (blocking=false) so the user's form response is never held up.
-	 * Extracts name/email/phone/message from WPForms field objects by type + label hint.
+	 * WPForms fields are objects keyed by numeric id, each with 'type', 'name', 'value'.
+	 * Type-first matching catches mislabeled fields; label/shape fallbacks handle
+	 * plain-text email/phone inputs.
 	 *
 	 * @param array $fields  Sanitised WPForms field array (numeric-id keyed).
-	 * @param int   $form_id WPForms form id (for the forward log).
+	 * @param int   $form_id WPForms form id (for the Forward_Log).
 	 * @return void
 	 */
-	private function maybe_forward_to_apointoo( $fields, $form_id = 0 ) {
-		$settings   = get_option( Settings::OPTION, array() );
-		$site_key   = isset( $settings['site_key'] ) ? trim( (string) $settings['site_key'] ) : '';
-		$intake_url = isset( $settings['sdk_url'] ) ? trim( (string) $settings['sdk_url'] ) : '';
-
-		// Not configured yet — nothing to forward to. The Settings screen shows
-		// the empty credential fields, so this needs no log entry.
-		if ( '' === $site_key || '' === $intake_url ) {
+	private function maybe_forward_to_apointoo( $fields, $form_id = 0 ): void {
+		if ( ! $this->is_intake_configured() ) {
 			return;
 		}
 
@@ -160,8 +156,6 @@ class WPForms_Adapter extends Abstract_Form_Adapter {
 				$type  = isset( $field['type'] ) ? (string) $field['type'] : '';
 				$label = strtolower( isset( $field['name'] ) ? (string) $field['name'] : $type );
 
-				// Type-first, then shape/label fallbacks — a mislabeled or
-				// plain-text email/phone field still gets recognised.
 				if ( empty( $lead['email'] ) && ( 'email' === $type || is_email( $value ) ) ) {
 					$lead['email'] = sanitize_email( $value );
 				} elseif ( empty( $lead['name'] ) && ( 'name' === $type || false !== strpos( $label, 'name' ) || false !== strpos( $label, 'nome' ) ) ) {
@@ -174,79 +168,6 @@ class WPForms_Adapter extends Abstract_Form_Adapter {
 			}
 		}
 
-		// Drop empty strings so the intake schema doesn't fail optional-field checks.
-		$lead = array_filter( $lead, fn( $v ) => '' !== $v );
-
-		$attribution  = Attribution::to_intake_payload();
-		$cookie       = Attribution::from_cookie();
-		$has_identity = isset( $cookie['apointoo_visitor_id'] ) || isset( $cookie['apointoo_session_id'] );
-		$have_email   = ! empty( $lead['email'] );
-		$have_phone   = ! empty( $lead['phone'] );
-
-		// The intake API requires at least one of email/phone — a submission with
-		// neither would 400. Record why we skipped instead of failing silently.
-		if ( ! $have_email && ! $have_phone ) {
-			Forward_Log::record(
-				array(
-					'source'       => 'wpforms',
-					'form_id'      => $form_id,
-					'ok'           => false,
-					'code'         => 0,
-					'wp_error'     => 'SKIPPED: no email or phone extracted from form',
-					'body'         => '',
-					'have_email'   => false,
-					'have_phone'   => false,
-					'attr_count'   => count( $attribution ),
-					'has_identity' => $has_identity,
-				)
-			);
-			return;
-		}
-
-		$response = wp_remote_post(
-			$intake_url,
-			array(
-				'headers'  => array(
-					'Content-Type'          => 'application/json',
-					'X-Apointoo-Tenant-Key' => $site_key,
-				),
-				'body'     => wp_json_encode(
-					array(
-						'lead'        => $lead,
-						// Cast to object so an EMPTY attribution serialises as {}
-						// not [] — the intake schema is z.record and rejects a
-						// JSON array ("Expected record, received object"), which
-						// silently 400'd every consent-gated lead with no tracking.
-						'attribution' => (object) $attribution,
-					)
-				),
-				'timeout'  => 8,
-				'blocking' => true,
-			)
-		);
-
-		$entry = array(
-			'source'       => 'wpforms',
-			'form_id'      => $form_id,
-			'have_email'   => $have_email,
-			'have_phone'   => $have_phone,
-			'attr_count'   => count( $attribution ),
-			'has_identity' => $has_identity,
-		);
-
-		if ( is_wp_error( $response ) ) {
-			$entry['ok']       = false;
-			$entry['code']     = 0;
-			$entry['wp_error'] = $response->get_error_message();
-			$entry['body']     = '';
-		} else {
-			$code              = (int) wp_remote_retrieve_response_code( $response );
-			$entry['ok']       = ( $code >= 200 && $code < 300 );
-			$entry['code']     = $code;
-			$entry['wp_error'] = '';
-			$entry['body']     = substr( (string) wp_remote_retrieve_body( $response ), 0, 500 );
-		}
-
-		Forward_Log::record( $entry );
+		$this->intake_send( array_filter( $lead, fn( $v ) => '' !== $v ), $form_id );
 	}
 }

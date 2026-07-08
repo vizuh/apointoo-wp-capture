@@ -3,7 +3,7 @@
  * Plugin Name:       Apointoo Capture
  * Plugin URI:        https://apointoo.com
  * Description:       Connects existing WordPress forms to the Apointoo capture contract. A capture/wiring adapter — NOT a form builder.
- * Version:           0.4.3
+ * Version:           0.5.0
  * Requires at least: 6.4
  * Requires PHP:      8.0
  * Author:            Apointoo
@@ -27,7 +27,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit; // No direct access.
 }
 
-define( 'APOINTOO_CAPTURE_VERSION', '0.4.0' );
+define( 'APOINTOO_CAPTURE_VERSION', '0.5.0' );
 define( 'APOINTOO_CAPTURE_DIR', plugin_dir_path( __FILE__ ) );
 define( 'APOINTOO_CAPTURE_URL', plugin_dir_url( __FILE__ ) );
 define( 'APOINTOO_CAPTURE_BASENAME', plugin_basename( __FILE__ ) );
@@ -35,16 +35,12 @@ define( 'APOINTOO_CAPTURE_MAIN_FILE', __FILE__ );
 
 /*
  * ───────────────────────────────────────────────────────────────────────────
- * Structural scaffold. The capture/wiring layer (form adapters, consent reader,
- * PII hasher, the neutral lead value object) is in place; the SDK transport and
- * the visitor /wp-json proxy are STUBS until the public capture contract lands.
+ * Live path: form adapters post contact fields plus consent-aware attribution
+ * server-to-server to the configured Apointoo dashboard contact intake.
+ * Google-specific normalization, hashing, deduplication, and upload stay in the
+ * dashboard so WordPress is never a second conversion source.
  *
- * Contract + auth design (vizuh/apointoo-sdk):
- *   _references/public-capture-contract-proposal.md
- *   docs/decisions/adr-021-capture-api-tokens.md
- * Tracked at: vizuh/apointoo-wp-capture#8 · vizuh/apointoo-sdk#116, #117, #118
- *
- * The hard boundary (docs/PLAN.md): capture/wiring adapter, NOT a form builder.
+ * Hard boundary (docs/PLAN.md): capture/wiring adapter, NOT a form builder.
  * ───────────────────────────────────────────────────────────────────────────
  */
 
