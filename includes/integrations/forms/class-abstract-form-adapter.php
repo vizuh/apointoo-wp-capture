@@ -7,6 +7,9 @@
 
 namespace Apointoo\Capture\Integrations\Forms;
 
+use Apointoo\Capture\Admin\Settings;
+use Apointoo\Capture\Capture\Attribution;
+use Apointoo\Capture\Capture\Forward_Log;
 use Apointoo\Capture\Capture\Lead;
 use Apointoo\Capture\Capture\PII_Hasher;
 use Apointoo\Capture\Capture\Transport_Interface;
@@ -143,6 +146,102 @@ abstract class Abstract_Form_Adapter implements Form_Adapter_Interface {
 		}
 
 		return $out;
+	}
+
+	/**
+	 * True when site_key + sdk_url are both configured. Cheap early-exit for
+	 * concrete adapters before they do field extraction.
+	 *
+	 * @return bool
+	 */
+	protected function is_intake_configured(): bool {
+		$settings = get_option( Settings::OPTION, array() );
+		return ! empty( $settings['site_key'] ) && ! empty( $settings['sdk_url'] );
+	}
+
+	/**
+	 * POST a normalised $lead to the intake API and log the result.
+	 *
+	 * All seven concrete adapters share this path — only their field-extraction
+	 * logic differs. Timeout is 5 s (was 8 s across all adapters) to halve the
+	 * worst-case block on a form submission when the intake API is slow.
+	 *
+	 * @param array{name?:string,email?:string,phone?:string,message?:string} $lead    Normalised lead (empty strings already stripped).
+	 * @param int|string                                                       $form_id Platform-native form id (for the Forward_Log).
+	 * @return void
+	 */
+	protected function intake_send( array $lead, $form_id ): void {
+		$settings   = get_option( Settings::OPTION, array() );
+		$site_key   = isset( $settings['site_key'] ) ? trim( (string) $settings['site_key'] ) : '';
+		$intake_url = isset( $settings['sdk_url'] )  ? trim( (string) $settings['sdk_url'] )  : '';
+
+		if ( '' === $site_key || '' === $intake_url ) {
+			return;
+		}
+
+		$attribution  = Attribution::to_intake_payload();
+		$cookie       = Attribution::from_cookie();
+		$has_identity = isset( $cookie['apointoo_visitor_id'] ) || isset( $cookie['apointoo_session_id'] );
+		$have_email   = ! empty( $lead['email'] );
+		$have_phone   = ! empty( $lead['phone'] );
+
+		if ( ! $have_email && ! $have_phone ) {
+			Forward_Log::record( array(
+				'source'       => $this->get_platform_slug(),
+				'form_id'      => $form_id,
+				'ok'           => false,
+				'code'         => 0,
+				'wp_error'     => 'SKIPPED: no email or phone extracted from form',
+				'body'         => '',
+				'have_email'   => false,
+				'have_phone'   => false,
+				'attr_count'   => count( $attribution ),
+				'has_identity' => $has_identity,
+			) );
+			return;
+		}
+
+		$response = wp_remote_post(
+			$intake_url,
+			array(
+				'headers'  => array(
+					'Content-Type'          => 'application/json',
+					'X-Apointoo-Tenant-Key' => $site_key,
+				),
+				'body'     => wp_json_encode( array(
+					'lead'        => $lead,
+					// Cast to object: empty attribution must serialise as {} not []
+					// (z.record rejects arrays and silently 400s consent-gated leads).
+					'attribution' => (object) $attribution,
+				) ),
+				'timeout'  => 5,
+				'blocking' => true,
+			)
+		);
+
+		$entry = array(
+			'source'       => $this->get_platform_slug(),
+			'form_id'      => $form_id,
+			'have_email'   => $have_email,
+			'have_phone'   => $have_phone,
+			'attr_count'   => count( $attribution ),
+			'has_identity' => $has_identity,
+		);
+
+		if ( is_wp_error( $response ) ) {
+			$entry['ok']       = false;
+			$entry['code']     = 0;
+			$entry['wp_error'] = $response->get_error_message();
+			$entry['body']     = '';
+		} else {
+			$code              = (int) wp_remote_retrieve_response_code( $response );
+			$entry['ok']       = ( $code >= 200 && $code < 300 );
+			$entry['code']     = $code;
+			$entry['wp_error'] = '';
+			$entry['body']     = substr( (string) wp_remote_retrieve_body( $response ), 0, 500 );
+		}
+
+		Forward_Log::record( $entry );
 	}
 
 	/**

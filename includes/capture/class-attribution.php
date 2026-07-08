@@ -71,6 +71,7 @@ class Attribution {
 		'ft_medium',
 		'ft_campaign',
 		'ft_landing_page',
+		'ft_channel',
 	);
 
 	/**
@@ -100,6 +101,7 @@ class Attribution {
 				'source',
 				'medium',
 				'channel',
+				'lt_channel',
 			),
 			// first_touch.
 			array(
@@ -107,6 +109,7 @@ class Attribution {
 				'ft_medium',
 				'ft_campaign',
 				'ft_landing_page',
+				'ft_channel',
 				'ft_timestamp',
 			)
 		);
@@ -152,6 +155,8 @@ class Attribution {
 	public static function to_intake_payload() {
 		$cookie = self::from_cookie();
 		$map    = array(
+			'apointoo_visitor_id'   => 'visitorId',
+			'apointoo_session_id'   => 'sessionId',
 			'apointoo_gclid'        => 'gclid',
 			'apointoo_gbraid'       => 'gbraid',
 			'apointoo_wbraid'       => 'wbraid',
@@ -173,6 +178,8 @@ class Attribution {
 			'apointoo_ft_source'    => 'ft_source',
 			'apointoo_ft_medium'    => 'ft_medium',
 			'apointoo_ft_campaign'  => 'ft_campaign',
+			'apointoo_ft_channel'   => 'ft_channel',
+			'apointoo_lt_channel'   => 'lt_channel',
 		);
 
 		$out = array();
