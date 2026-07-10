@@ -471,6 +471,9 @@ class Settings {
 			$detail = '' !== (string) ( $r['wp_error'] ?? '' ) ? (string) $r['wp_error'] : (string) ( $r['body'] ?? '' );
 			$attr   = isset( $r['attr_count'] ) ? (int) $r['attr_count'] : 0;
 			$attrlabel = ( 0 === $attr && empty( $r['has_identity'] ) ) ? '0 (no cookie)' : (string) $attr;
+			if ( 0 === $attr && isset( $r['consent'] ) && ! $r['consent'] ) {
+				$attrlabel = '0 (no consent)';
+			}
 			printf(
 				'<tr><td>%1$s</td><td>%2$s</td><td>%3$s</td><td style="color:%4$s">%5$s</td><td>%6$s</td><td>%7$s</td><td>%8$s</td><td>%9$s</td></tr>',
 				esc_html( isset( $r['ts'] ) ? wp_date( 'Y-m-d H:i:s', (int) $r['ts'] ) : '' ),

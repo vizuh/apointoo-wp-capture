@@ -13,16 +13,16 @@ Connect your existing WordPress forms to Apointoo — server-side, consent-aware
 == Description ==
 
 Apointoo Capture forwards leads from the forms you already use (Contact Form 7,
-WPForms, Gravity Forms, Elementor Pro, Fluent Forms, Ninja Forms) to the Apointoo capture
-contract — server-side, consent-aware, with email/phone hashed before they leave
-your site.
+WPForms, Gravity Forms, Elementor Pro, Fluent Forms, Ninja Forms, Kadence Blocks)
+to the Apointoo capture contract — server-side and consent-aware.
 
 It adapts to forms that already exist; it never creates, renders, or manages a
 form, a booking, or any submission UI.
 
-**This plugin connects to the Apointoo SDK, an external service.** It sends
-hashed lead identifiers + attribution to your configured Apointoo tenant endpoint
-so conversions can be measured in Google Ads. See the privacy section below.
+**This plugin connects to the Apointoo SDK, an external service.** On each form
+submission it sends the submitted contact fields plus consent-gated attribution
+to your configured Apointoo tenant endpoint so conversions can be measured in
+Google Ads. See the privacy section below.
 
 Get your credentials and setup instructions from the Apointoo dashboard. Support: support@apointoo.com.
 
@@ -33,10 +33,11 @@ measure conversions from the forms you already use. The plugin is an interface t
 provides the conversion-measurement functionality.
 
 **What is sent, and when.** Only after you enter your Apointoo credentials, and only on a form submission, the
-plugin sends to *your configured Apointoo endpoint*: SHA-256-hashed email/phone identifiers, marketing
-attribution (UTM parameters and ad click IDs), and the visitor's consent state. Raw email and phone are hashed
-on your own server and are never transmitted. Ad identifiers are only forwarded when marketing consent is
-granted. Nothing is sent until you configure the plugin.
+plugin sends to *your configured Apointoo endpoint*: the contact fields the visitor submitted (name, email,
+phone, message), transmitted as submitted, plus marketing attribution (UTM parameters, ad click IDs, and the
+plugin's first-party visitor/session ids). Advertising and click identifiers and the attribution data are only
+forwarded when marketing consent is granted — the plugin enforces this server-side, and when no consent signal
+is present it withholds them. Nothing is sent until you configure the plugin.
 
 * Terms of Use: https://apointoo.com/terms
 * Privacy Policy: https://apointoo.com/privacy
@@ -52,13 +53,17 @@ granted. Nothing is sent until you configure the plugin.
 
 = Does it store personal data on my site? =
 
-No. Raw email/phone are hashed (SHA-256) in PHP and discarded; only hashes are
-forwarded. Captured data lives in the Apointoo ledger, not in WordPress.
+No. The plugin does not store form submissions in WordPress. On submission the
+contact fields (name, email, phone, message) are transmitted as submitted to
+the Apointoo intake endpoint you configure; captured data lives in the Apointoo
+ledger, not in WordPress.
 
 = Does it respect consent? =
 
 Yes. It reads your existing consent plugin (WP Consent API / Complianz /
-Cookiebot) and only forwards ad identifiers when marketing consent is granted.
+Cookiebot) and only forwards ad identifiers and attribution data when marketing
+consent is granted. The plugin enforces this server-side; with no consent
+signal present, they are withheld by default.
 
 == Changelog ==
 

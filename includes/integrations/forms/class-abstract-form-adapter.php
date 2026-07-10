@@ -9,6 +9,7 @@ namespace Apointoo\Capture\Integrations\Forms;
 
 use Apointoo\Capture\Admin\Settings;
 use Apointoo\Capture\Capture\Attribution;
+use Apointoo\Capture\Capture\Consent;
 use Apointoo\Capture\Capture\Forward_Log;
 use Apointoo\Capture\Capture\Lead;
 use Apointoo\Capture\Capture\PII_Hasher;
@@ -166,6 +167,10 @@ abstract class Abstract_Form_Adapter implements Form_Adapter_Interface {
 	 * logic differs. Timeout is 5 s (was 8 s across all adapters) to halve the
 	 * worst-case block on a form submission when the intake API is slow.
 	 *
+	 * Attribution is consent-gated here ({@see Consent::marketing_allowed()}):
+	 * without a marketing grant only the contact fields are sent — no click ids,
+	 * UTMs, or visitor/session ids.
+	 *
 	 * @param array{name?:string,email?:string,phone?:string,message?:string} $lead    Normalised lead (empty strings already stripped).
 	 * @param int|string                                                       $form_id Platform-native form id (for the Forward_Log).
 	 * @return void
@@ -179,9 +184,13 @@ abstract class Abstract_Form_Adapter implements Form_Adapter_Interface {
 			return;
 		}
 
-		$attribution  = Attribution::to_intake_payload();
-		$cookie       = Attribution::from_cookie();
-		$has_identity = isset( $cookie['apointoo_visitor_id'] ) || isset( $cookie['apointoo_session_id'] );
+		// Consent gate (F05): forwarding an ad identifier is the ad_user_data
+		// action, so the attribution cookie payload (click ids, UTMs, visitor/
+		// session ids) only rides along with a marketing grant. The contact
+		// fields still go — a visitor-initiated first-party lead transfer.
+		$consent      = Consent::marketing_allowed();
+		$attribution  = $consent ? Attribution::to_intake_payload() : array();
+		$has_identity = isset( $attribution['visitorId'] ) || isset( $attribution['sessionId'] );
 		$have_email   = ! empty( $lead['email'] );
 		$have_phone   = ! empty( $lead['phone'] );
 
@@ -197,6 +206,7 @@ abstract class Abstract_Form_Adapter implements Form_Adapter_Interface {
 				'have_phone'   => false,
 				'attr_count'   => count( $attribution ),
 				'has_identity' => $has_identity,
+				'consent'      => $consent,
 			) );
 			return;
 		}
@@ -226,6 +236,7 @@ abstract class Abstract_Form_Adapter implements Form_Adapter_Interface {
 			'have_phone'   => $have_phone,
 			'attr_count'   => count( $attribution ),
 			'has_identity' => $has_identity,
+			'consent'      => $consent,
 		);
 
 		if ( is_wp_error( $response ) ) {

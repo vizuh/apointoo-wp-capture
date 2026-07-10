@@ -1,7 +1,13 @@
 # Apointoo Capture (WordPress)
 
 Connects a WordPress site's **existing** forms to the Apointoo capture contract, so leads and their
-attribution flow into the Apointoo SDK — server-side, consent-aware, with PII hashed before it leaves the site.
+attribution flow into the Apointoo SDK — server-side and consent-aware.
+
+**The live intake path today:** on a form submission the adapters forward the contact fields (name, email,
+phone, message) **as submitted** to the Apointoo intake endpoint the site owner configures — the site's own
+tenant. Advertising/click identifiers and the attribution cookie payload ride along **only when marketing
+consent is granted**, enforced server-side in the shared adapter path. The hash-and-track SDK transport
+described below is the target design and is still stubbed.
 
 > **Status: scaffold.** The capture/wiring layer is built to WordPress standards (phpcs/WPCS clean,
 > PHP 8.0+ compatible): autoloader, plugin bootstrap, the form-adapter framework (interface + abstract +
@@ -28,8 +34,9 @@ If a feature would make the plugin usable *without* an existing form, it is out 
 2. **Wire** — per-form-plugin adapters read each form's server-side submit hook and emit one neutral
    `track lead_captured` + a companion `identify`.
 3. **Gate** — reads Consent Mode v2 (WP Consent API / Complianz / Cookiebot / CookieYes), strips ad
-   identifiers unless marketing consent is granted.
-4. **Hash** — normalizes + SHA-256s email/phone in PHP before forwarding; raw PII never leaves the site.
+   identifiers unless marketing consent is granted. *(Live today on the intake path.)*
+4. **Hash** — normalizes + SHA-256s email/phone in PHP before forwarding to the SDK transport. *(Not the
+   live intake path: the intake forward sends contact fields as submitted — see above.)*
 5. **Forward** — the `/wp-json` proxy injects the tenant server secret server-side and posts to the SDK's
    `POST /capture/track` + `/capture/identify`.
 
