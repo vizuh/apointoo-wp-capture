@@ -167,13 +167,13 @@ abstract class Abstract_Form_Adapter implements Form_Adapter_Interface {
 	 * worst-case block on a form submission when the intake API is slow.
 	 *
 	 * @param array{name?:string,email?:string,phone?:string,message?:string} $lead    Normalised lead (empty strings already stripped).
-	 * @param int|string                                                       $form_id Platform-native form id (for the Forward_Log).
+	 * @param int|string                                                      $form_id Platform-native form id (for the Forward_Log).
 	 * @return void
 	 */
 	protected function intake_send( array $lead, $form_id ): void {
 		$settings   = get_option( Settings::OPTION, array() );
 		$site_key   = isset( $settings['site_key'] ) ? trim( (string) $settings['site_key'] ) : '';
-		$intake_url = isset( $settings['sdk_url'] )  ? trim( (string) $settings['sdk_url'] )  : '';
+		$intake_url = isset( $settings['sdk_url'] ) ? trim( (string) $settings['sdk_url'] ) : '';
 
 		if ( '' === $site_key || '' === $intake_url ) {
 			return;
@@ -186,18 +186,20 @@ abstract class Abstract_Form_Adapter implements Form_Adapter_Interface {
 		$have_phone   = ! empty( $lead['phone'] );
 
 		if ( ! $have_email && ! $have_phone ) {
-			Forward_Log::record( array(
-				'source'       => $this->get_platform_slug(),
-				'form_id'      => $form_id,
-				'ok'           => false,
-				'code'         => 0,
-				'wp_error'     => 'SKIPPED: no email or phone extracted from form',
-				'body'         => '',
-				'have_email'   => false,
-				'have_phone'   => false,
-				'attr_count'   => count( $attribution ),
-				'has_identity' => $has_identity,
-			) );
+			Forward_Log::record(
+				array(
+					'source'       => $this->get_platform_slug(),
+					'form_id'      => $form_id,
+					'ok'           => false,
+					'code'         => 0,
+					'wp_error'     => 'SKIPPED: no email or phone extracted from form',
+					'body'         => '',
+					'have_email'   => false,
+					'have_phone'   => false,
+					'attr_count'   => count( $attribution ),
+					'has_identity' => $has_identity,
+				)
+			);
 			return;
 		}
 
@@ -208,12 +210,14 @@ abstract class Abstract_Form_Adapter implements Form_Adapter_Interface {
 					'Content-Type'          => 'application/json',
 					'X-Apointoo-Tenant-Key' => $site_key,
 				),
-				'body'     => wp_json_encode( array(
-					'lead'        => $lead,
-					// Cast to object: empty attribution must serialise as {} not []
-					// (z.record rejects arrays and silently 400s consent-gated leads).
-					'attribution' => (object) $attribution,
-				) ),
+				'body'     => wp_json_encode(
+					array(
+						'lead'        => $lead,
+						// Cast to object: empty attribution must serialise as {} not []
+						// (z.record rejects arrays and silently 400s consent-gated leads).
+						'attribution' => (object) $attribution,
+					)
+				),
 				'timeout'  => 5,
 				'blocking' => true,
 			)

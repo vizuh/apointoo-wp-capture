@@ -159,6 +159,8 @@ class Kadence_Forms_Adapter extends Abstract_Form_Adapter {
 	}
 
 	/**
+	 * Forward an extracted Kadence submission to Apointoo.
+	 *
 	 * @param array      $fields  Kadence field entries (see extract_lead).
 	 * @param int|string $form_id Form identifier (for the Forward_Log).
 	 * @return void
