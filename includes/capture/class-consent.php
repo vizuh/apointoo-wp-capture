@@ -55,6 +55,27 @@ class Consent {
 	}
 
 	/**
+	 * Google Consent Mode v2 snapshot expected by Apointoo dashboard intake.
+	 *
+	 * @param bool|null $marketing_allowed Reuse an already-resolved decision.
+	 * @return array<string, string>
+	 */
+	public static function to_intake_payload( $marketing_allowed = null ) {
+		$marketing_allowed = is_bool( $marketing_allowed ) ? $marketing_allowed : self::marketing_allowed();
+		$ad_state          = $marketing_allowed ? 'granted' : 'denied';
+		$analytics_state   = function_exists( 'wp_has_consent' ) && wp_has_consent( 'statistics' ) ? 'granted' : 'denied';
+
+		return array(
+			'adStorage'         => $ad_state,
+			'analyticsStorage'  => $analytics_state,
+			'adUserData'        => $ad_state,
+			'adPersonalization' => $ad_state,
+			'capturedAt'        => gmdate( 'c' ),
+			'source'            => 'api',
+		);
+	}
+
+	/**
 	 * Client-side consent posture for ApointooCaptureConfig.
 	 *
 	 * The tracker auto-detects the active CMP; this only tells it whether to gate

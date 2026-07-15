@@ -4,6 +4,12 @@
 **Author trail:** drafted by multi-agent workflow `wp-plugin-plan-and-contract`, corrected against an adversarial litmus critic.
 **Companion:** the public capture contract this plugin targets is `_references/public-capture-contract-proposal.md`.
 
+> **Implementation note (2026-07-15):** this document began as a proposal. The shipped connected path now
+> posts raw contact fields plus attribution to the dashboard contact intake with a tenant key. The dashboard,
+> not WordPress or the headless SDK, owns Google Ads normalization, consent re-validation, hashing, conversion
+> deduplication, retries, and receipts. Where later sections describe `/capture/track` + `/capture/identify` or
+> PHP-side hashing as current behavior, treat that as historical design rather than the live contract.
+
 ## 1. Angle & litmus justification
 
 This plugin is the **capture pillar's first "bring your own frontend" adapter.** Where Apointoo's booking-app
@@ -41,8 +47,8 @@ wp.org-legal *free* plugin (not a thin front-end for a paid service, not trialwa
   straight into the site owner's *own* systems (their CRM, email, form entries). We process nothing; the owner
   gets richer leads for free. This is the proven ClickTrail model and is fully functional without Apointoo.
 - **Paid/connected tier (opt-in): send to Apointoo.** Once the owner enters Apointoo credentials, the same
-  captured data is *also* forwarded (hashed PII + attribution + consent) to the Apointoo SDK for offline
-  conversion upload, identity/outcome resolution, and the ledger. This is the only part that contacts an
+  captured data is *also* forwarded (contact + attribution + consent) to the Apointoo dashboard intake for
+  offline conversion upload, identity/outcome resolution, and the ledger. This is the only part that contacts an
   external service, and it is **off by default**.
 
 Implications:
@@ -58,7 +64,7 @@ Implications:
 it never creates, renders, styles, validates, or manages a form, a booking, or any submission UI.**
 
 The plugin's entire job: read what an existing form already captured → normalize it → attach attribution +
-consent → hash PII → forward server-side to the SDK capture contract. Nothing renders to the visitor except,
+consent → forward server-side to the dashboard contact intake. Nothing renders to the visitor except,
 at most, a thin read-only status panel in wp-admin.
 
 Permanent non-goals:
@@ -187,33 +193,35 @@ Resolution order (PHP at forward time, mirrored in JS for enrichment):
    `Cookiebot.consent.marketing`; CookieYes/Borlabs equivalents.
 3. **Direct cookie fallback:** `$_COOKIE['wp_consent_marketing']` (`allow`/`deny`) + `wp_consent_type`.
 
-Payload carries **explicit, granular** consent (not an inference): `consent:{ ad_user_data, ad_personalization,
-ad_storage, analytics_storage, consent_type, region, cmp_source, timestamp }`. Carrying both Google v2
-signals (not a single boolean) future-proofs the 2026 Google Ads consent changes and maps onto Data Manager.
+Payload carries the dashboard's explicit Google Consent Mode v2 vector:
+`consent:{ adStorage, analyticsStorage, adUserData, adPersonalization, capturedAt, source }`, where every
+dimension is `granted` or `denied`. The server-side WordPress reader uses `source: "api"`.
 
 Hard rules:
 - Marketing/`ad_user_data` ≠ granted → **strip all ad identifiers** from the forwarded payload. Lead may still
   be captured (analytics/first-party), but no click ID leaves the site.
 - `gclid` via `url_passthrough` is **never** treated as consent.
-- The SDK **re-validates** consent on ingestion (E1 outcome-time gate) and stores the snapshot as provenance,
+- The dashboard **re-validates** consent on ingestion (E1 outcome-time gate) and stores the snapshot as provenance,
   so a later withdrawal can retract the offline conversion via the GAds adjustment path.
 
 ## 6. PII rule
 
-**Canonical: PII is hashed server-side, in PHP, before the request leaves WordPress (B5).** Raw
-email/phone/name from the form hook are normalized then SHA-256'd in the plugin's PHP path; only hashes go on
-the wire and into the ledger. Raw PII is discarded immediately after hashing and is **never** sent client-side.
+**Canonical shipped path:** raw contact fields required to operate the lead are sent from the server-side
+form hook to the dashboard contact intake over TLS. They are never sent through browser telemetry. The
+dashboard owns Google-specific normalization and SHA-256 hashing so all capture surfaces produce identical
+match identifiers and tenant consent/HIPAA policy is applied once.
 
 Normalization (must match the SDK's one canonical spec so hashes collide):
 - **Email:** lowercase + trim; for `gmail.com`/`googlemail.com` strip dots and `+suffix`. Then `sha256(hex)`.
 - **Phone:** E.164 (`+`, country code, digits only). Then `sha256(hex)`.
 
-The forwarded `identify` carries `email_hash`/`phone_hash` (and `external_id` if available); `lead_captured`
-`properties` carry only non-PII fields. This gives Enhanced-Conversions-for-Leads matching without ever
-transmitting raw identifiers.
+For Google matching, the dashboard lowercases and trims email before hashing. Phone is hashed only when it is
+explicitly valid E.164 (or an unambiguous `00` international prefix); it never guesses a country code for a
+bare national number. Under a strict tenant consent regime, hashed user data requires `adUserData: granted`.
 
-Belt-and-suspenders: even though the plugin hashes, the SDK contract **also** hashes/rejects raw at ingestion
-(B5 floor), so a misconfigured adapter cannot leak raw PII into the ledger.
+This CMP advertising consent is separate from a form's `marketingConsent` email-list opt-in. Customer Match
+audiences are also separate from conversion upload and require their own purpose, consent, eligibility, and
+deletion workflow.
 
 ## 7. Build order / milestones
 

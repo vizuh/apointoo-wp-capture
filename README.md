@@ -1,13 +1,11 @@
 # Apointoo Capture (WordPress)
 
 Connects a WordPress site's **existing** forms to the Apointoo capture contract, so leads and their
-attribution flow into the Apointoo SDK — server-side, consent-aware, with PII hashed before it leaves the site.
+attribution flow into the Apointoo dashboard intake — server-side and consent-aware.
 
-> **Status: scaffold.** The capture/wiring layer is built to WordPress standards (phpcs/WPCS clean,
-> PHP 8.0+ compatible): autoloader, plugin bootstrap, the form-adapter framework (interface + abstract +
-> manager), CF7 wired with the other four adapters stubbed for M3, plus the neutral lead value object, PII
-> hasher (B5), and consent reader. The **SDK transport and the visitor `/wp-json` proxy are stubs** until the
-> public capture contract lands. See [Build order](#build-order).
+> **Current connected path:** supported form adapters POST the raw contact fields required by the dashboard
+> to its tenant-key-protected contact intake endpoint over TLS. The dashboard is the system of record and the
+> single owner of Google Ads normalization, SHA-256 matching identifiers, conversion deduplication, and upload.
 
 ## The hard boundary
 
@@ -21,33 +19,32 @@ no consent banner (we *read* the site's CMP, never present one) · no business l
 
 If a feature would make the plugin usable *without* an existing form, it is out of scope.
 
-## What it does (once built)
+## What it does
 
 1. **Capture** — a headless JS tracker mints `vis_`/`ses_` ids and persists attribution (UTM + click ids +
    referrer); the visitor cookie is **server-set** via a same-domain `/wp-json` proxy (survives Safari ITP).
-2. **Wire** — per-form-plugin adapters read each form's server-side submit hook and emit one neutral
-   `track lead_captured` + a companion `identify`.
+2. **Wire** — per-form-plugin adapters read each form's server-side submit hook and forward one contact to
+   the configured dashboard intake endpoint.
 3. **Gate** — reads Consent Mode v2 (WP Consent API / Complianz / Cookiebot / CookieYes), strips ad
-   identifiers unless marketing consent is granted.
-4. **Hash** — normalizes + SHA-256s email/phone in PHP before forwarding; raw PII never leaves the site.
-5. **Forward** — the `/wp-json` proxy injects the tenant server secret server-side and posts to the SDK's
-   `POST /capture/track` + `/capture/identify`.
+   identifiers unless marketing consent is granted, and sends the dashboard's canonical consent vector.
+4. **Forward** — sends contact fields plus attribution server-to-server with `X-Apointoo-Tenant-Key`.
+5. **Convert** — the dashboard chooses one Google click ID (`gclid` → `gbraid` → `wbraid`) and hashes only
+   eligible email/E.164 phone identifiers when tenant policy and consent allow it.
 
 ## Build order
 
-This plugin targets the Apointoo **public capture contract**, which must land first:
+The live integration targets the dashboard **contact intake contract**:
 
 ```
-apointoo-sdk: ledger PR (in flight)
-  └─> public capture contract  +  ADR-021 (capture API tokens)   ← designed, not yet built
-        └─> H3 Google Data Manager feedback (blocked on Google access)
-              └─> THIS PLUGIN:  M0 dogfood → M1 one adapter → M2 consent → M3 multi-form + distribute
+WordPress form hook
+  └─> dashboard contact intake (tenant key)
+        └─> conversion ledger + Google Data Manager worker
 ```
 
-Design source of truth (in `vizuh/apointoo-sdk`):
-- Contract — `_references/public-capture-contract-proposal.md`
-- Auth — `docs/decisions/adr-021-capture-api-tokens.md`
-- This plugin's full plan — [`docs/PLAN.md`](docs/PLAN.md)
+Contract references:
+- SDK attribution shape — `vizuh/apointoo-sdk/src/core/schemas.ts`
+- Dashboard intake and Google upload behavior — `vizuh/apointoo-dashboard`
+- Historical design and current-contract corrections — [`docs/PLAN.md`](docs/PLAN.md)
 
 ## Distribution
 
@@ -81,11 +78,13 @@ No PHP runtime is required to develop the design — but the checks need PHP/Com
 
 ## Security & privacy
 
-- **Threat model** (design review): `apointoo-sdk` design family → `_references/capture-security-review.md`.
-  The load-bearing rule: **the publishable key is browser-extractable — assume the publishable path is fully
-  hostile.** Two separate forward paths (§3b of the plan): a visitor proxy that carries only the *publishable*
-  key + telemetry, and a server-side form hook that holds the *secret* and originates all PII/conversion calls.
-  The secret never sits behind a browser route (C1); conversion-eligible events require the secret (C2).
+- Raw contact data is sent only from the server-side form hook to the configured HTTPS dashboard intake;
+  it is never placed in browser telemetry or attribution cookies.
+- Marketing consent is not inferred from the presence of a click ID. When denied or unavailable, the plugin
+  strips ad IDs before forwarding and the dashboard enforces its tenant consent regime again.
+- `marketingConsent` (email-list opt-in) is a separate form decision and is never inferred from CMP ad consent.
+- Customer Match audiences are not created by this plugin or by conversion upload; they require a separate
+  tenant-facing purpose, consent, eligibility, and deletion workflow.
 - **DPIA:** [`docs/dpia.md`](docs/dpia.md). Dominant gaps: real **erasure** (crypto-shred, not just a
   tombstone) and PII scrubbing of free-form fields **must land before any real (non-sandbox) PII flows.**
 
