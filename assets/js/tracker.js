@@ -2,10 +2,14 @@
  * Apointoo Capture — front-end attribution tracker.
  *
  * Captures marketing attribution first-party, mints neutral vis_/ses_ ids, derives
- * a source/medium/channel, fills the hidden fields the form adapters inject, and
- * (optionally) decorates outbound links so attribution survives a cross-domain
- * hand-off. Nothing is sent anywhere by this script — the data rides the form into
- * the site owner's own systems.
+ * a source/medium/channel plus a stable ft_channel/lt_channel bucket pair
+ * (paid_search/paid_social/organic_search/organic_social/direct/referral/other),
+ * fills the hidden fields the form adapters inject, and (optionally) decorates
+ * outbound links so attribution survives a cross-domain hand-off. Nothing is sent
+ * anywhere by this script — the data rides the form into the site owner's own
+ * systems.
+ *
+ * Public JS API: window.apointooTracking() — see below.
  *
  * Ported from ClickTrail's clicutcl-attribution.js into Apointoo's flat-key scheme
  * + two-phase consent model. Vanilla ES5-style IIFE; no build step, no dependencies.
@@ -27,8 +31,8 @@
 		'gclid', 'gbraid', 'wbraid', 'fbclid', 'msclkid', 'ttclid', 'twclid',
 		'li_fat_id', 'sccid', 'epik', 'rdt_cid', 'dclid',
 		'referrer', 'landing_page',
-		'source', 'medium', 'channel',
-		'ft_source', 'ft_medium', 'ft_campaign', 'ft_landing_page', 'ft_timestamp'
+		'source', 'medium', 'channel', 'lt_channel',
+		'ft_source', 'ft_medium', 'ft_campaign', 'ft_landing_page', 'ft_channel', 'ft_timestamp'
 	];
 
 	var CLICK_IDS = cfg.clickIds && cfg.clickIds.length ? cfg.clickIds : [
@@ -39,7 +43,7 @@
 		'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'utm_id'
 	];
 	var FIRST_TOUCH_KEYS = cfg.firstTouchKeys && cfg.firstTouchKeys.length ? cfg.firstTouchKeys : [
-		'ft_source', 'ft_medium', 'ft_campaign', 'ft_landing_page'
+		'ft_source', 'ft_medium', 'ft_campaign', 'ft_landing_page', 'ft_channel'
 	];
 
 	var KEYS = unionKeys( cfg.keys && cfg.keys.length ? cfg.keys : ALL_KEYS );
@@ -84,6 +88,17 @@
 	];
 
 	var PAID_MEDIUMS = [ 'cpc', 'ppc', 'paid', 'paidsearch', 'paid_social' ];
+
+	// Click-id -> bucket split used only by resolveChannelBucket() (below).
+	// ponytail: dclid (DV360) has no distinct "display" bucket in this taxonomy —
+	// grouped under paid_search as the nearest fit; revisit if a client needs
+	// display reported apart from search.
+	var SEARCH_CLICK_IDS = [ 'gclid', 'gbraid', 'wbraid', 'msclkid', 'dclid' ];
+	var SOCIAL_CLICK_IDS = [ 'li_fat_id', 'twclid', 'rdt_cid', 'ttclid', 'epik', 'sccid' ];
+	var SOCIAL_AD_SOURCES = [
+		'facebook', 'meta', 'instagram', 'fb', 'ig', 'linkedin', 'twitter', 'x',
+		'reddit', 'tiktok', 'pinterest', 'snapchat', 'snap'
+	];
 
 	// =============================================================================
 	// Small utilities
@@ -374,6 +389,39 @@
 	}
 
 	// =============================================================================
+	// Public API — the plugin's stable external contract
+	// =============================================================================
+
+	/**
+	 * window.apointooTracking() — the plugin's stable public JS contract. Site-specific
+	 * integration scripts should read attribution through this function rather than
+	 * parsing the `apointoo_capture` cookie or hidden `apointoo_*` form fields
+	 * directly: the field names below will not change without a major version bump.
+	 *
+	 * Safe to call at any time, including before the tracker has finished booting —
+	 * returns `{}` rather than throwing. `{}` (or a record missing a given key) can
+	 * mean either "no attribution signal captured yet" or "marketing consent not
+	 * yet granted" under the two-phase consent model; it does not necessarily mean
+	 * the visitor is untracked.
+	 *
+	 * Keys mirror the server-side contract (`Attribution::keys()`): identity
+	 * (`visitor_id`, `session_id`), UTM params, click ids, `referrer`/`landing_page`,
+	 * last-touch derived fields (`source`, `medium`, `channel`, `lt_channel`), and
+	 * write-once first-touch fields (`ft_source`, `ft_medium`, `ft_campaign`,
+	 * `ft_landing_page`, `ft_channel`, `ft_timestamp`). `channel`/`ft_channel`/
+	 * `lt_channel` are distinct: `channel` is a granular platform label (e.g.
+	 * "Google Ads"), while `ft_channel`/`lt_channel` are the coarser, stable bucket
+	 * (`paid_search`, `paid_social`, `organic_search`, `organic_social`, `direct`,
+	 * `referral`, `other`) — first-touch is captured once and never overwritten,
+	 * last-touch refreshes on every visit that carries a new attribution signal.
+	 *
+	 * @return {Object<string, string>} Flat field map. Never null/undefined.
+	 */
+	window.apointooTracking = function () {
+		return loadDurable();
+	};
+
+	// =============================================================================
 	// Classifier — derive source / medium / channel
 	// =============================================================================
 
@@ -527,6 +575,64 @@
 		return 'Unknown';
 	}
 
+	// Coarse channel bucket — paid_search / paid_social / organic_search /
+	// organic_social / direct / referral / other. Stable across ad-network naming
+	// churn (unlike resolveChannel's platform labels above); this is what
+	// ft_channel / lt_channel store. Same signal priority as resolveChannel: click
+	// ids, then paid medium, then referrer. `extHost` must already be filtered to
+	// an external host (or '') — pass externalReferrer()'s `.host`, never a raw
+	// referrer, or same-site navigation misclassifies as 'referral'.
+	function resolveChannelBucket( qs, extHost ) {
+		var i;
+
+		for ( i = 0; i < SEARCH_CLICK_IDS.length; i++ ) {
+			if ( qs[ SEARCH_CLICK_IDS[ i ] ] ) {
+				return 'paid_search';
+			}
+		}
+		for ( i = 0; i < SOCIAL_CLICK_IDS.length; i++ ) {
+			if ( qs[ SOCIAL_CLICK_IDS[ i ] ] ) {
+				return 'paid_social';
+			}
+		}
+
+		var med = String( qs.utm_medium || '' ).toLowerCase();
+
+		// fbclid is Ads only when a paid medium is also present (mirrors resolveChannel).
+		if ( qs.fbclid && PAID_MEDIUMS.indexOf( med ) !== -1 ) {
+			return 'paid_social';
+		}
+
+		if ( PAID_MEDIUMS.indexOf( med ) !== -1 ) {
+			var src = String( qs.utm_source || '' ).toLowerCase();
+			return ( med === 'paid_social' || SOCIAL_AD_SOURCES.indexOf( src ) !== -1 ) ? 'paid_social' : 'paid_search';
+		}
+
+		if ( extHost ) {
+			var classified = classifyReferrer( extHost );
+			if ( classified.medium === 'organic' ) {
+				return 'organic_search';
+			}
+			if ( classified.medium === 'social' ) {
+				return 'organic_social';
+			}
+			return 'referral';
+		}
+
+		// fbclid without a paid medium defaults to organic Facebook (mirrors resolveChannel).
+		if ( qs.fbclid ) {
+			return 'organic_social';
+		}
+
+		for ( i = 0; i < UTMS.length; i++ ) {
+			if ( qs[ UTMS[ i ] ] ) {
+				return 'other';
+			}
+		}
+
+		return 'direct';
+	}
+
 	// External referrer details (drop same-host referrers).
 	function externalReferrer( raw ) {
 		var url = parseUrl( raw, window.location.href );
@@ -589,6 +695,7 @@
 				out.medium = sanitizeValue( derived.medium );
 			}
 			out.channel = resolveChannel( qs, referrer );
+			out.lt_channel = resolveChannelBucket( qs, ext ? ext.host : '' );
 			hasSignal = true;
 		}
 
@@ -603,7 +710,7 @@
 	// utm/click/derived, first-touch-only for referrer/landing_page + ft_* fields.
 	function mergeRecord( data, signal ) {
 		var i;
-		var lastTouchKeys = UTMS.concat( CLICK_IDS ).concat( [ 'source', 'medium', 'channel' ] );
+		var lastTouchKeys = UTMS.concat( CLICK_IDS ).concat( [ 'source', 'medium', 'channel', 'lt_channel' ] );
 
 		for ( i = 0; i < lastTouchKeys.length; i++ ) {
 			var k = lastTouchKeys[ i ];
@@ -630,6 +737,9 @@
 			}
 			if ( signal.utm_campaign ) {
 				data.ft_campaign = signal.utm_campaign;
+			}
+			if ( signal.lt_channel ) {
+				data.ft_channel = signal.lt_channel;
 			}
 			data.ft_landing_page = window.location.pathname;
 			data.ft_timestamp = String( Date.now() );

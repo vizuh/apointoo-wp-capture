@@ -75,6 +75,7 @@ class Form_Integration_Manager {
 			'Apointoo\Capture\Integrations\Forms\Elementor_Forms_Adapter',
 			'Apointoo\Capture\Integrations\Forms\Fluent_Forms_Adapter',
 			'Apointoo\Capture\Integrations\Forms\Ninja_Forms_Adapter',
+			'Apointoo\Capture\Integrations\Forms\Kadence_Forms_Adapter',
 		);
 
 		/**
