@@ -147,11 +147,17 @@ class Attribution {
 	 * stripping the `apointoo_` prefix. Returns only set keys so the intake
 	 * route never receives null-valued attribution fields.
 	 *
-	 * @return array<string, string>
+	 * Google Consent Mode v2 is stamped on every connected submission. Ad click
+	 * identifiers are omitted unless marketing consent is granted; UTMs and
+	 * first-party journey context remain available for lead reporting.
+	 *
+	 * @return array<string, mixed>
 	 */
 	public static function to_intake_payload() {
-		$cookie = self::from_cookie();
-		$map    = array(
+		$cookie            = self::from_cookie();
+		$marketing_allowed = Consent::marketing_allowed();
+		$ad_ids            = array( 'gclid', 'gbraid', 'wbraid', 'fbclid', 'msclkid', 'ttclid', 'twclid', 'liFatId', 'sccid', 'epik', 'rdtCid', 'dclid' );
+		$map               = array(
 			'apointoo_gclid'        => 'gclid',
 			'apointoo_gbraid'       => 'gbraid',
 			'apointoo_wbraid'       => 'wbraid',
@@ -160,6 +166,8 @@ class Attribution {
 			'apointoo_ttclid'       => 'ttclid',
 			'apointoo_twclid'       => 'twclid',
 			'apointoo_li_fat_id'    => 'liFatId',
+			'apointoo_sccid'        => 'sccid',
+			'apointoo_epik'         => 'epik',
 			'apointoo_rdt_cid'      => 'rdtCid',
 			'apointoo_dclid'        => 'dclid',
 			'apointoo_utm_source'   => 'utmSource',
@@ -177,10 +185,14 @@ class Attribution {
 
 		$out = array();
 		foreach ( $map as $cookie_key => $intake_key ) {
+			if ( ! $marketing_allowed && in_array( $intake_key, $ad_ids, true ) ) {
+				continue;
+			}
 			if ( isset( $cookie[ $cookie_key ] ) ) {
 				$out[ $intake_key ] = $cookie[ $cookie_key ];
 			}
 		}
+		$out['consent'] = Consent::to_intake_payload( $marketing_allowed );
 
 		return $out;
 	}
