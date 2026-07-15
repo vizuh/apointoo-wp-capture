@@ -18,6 +18,7 @@ vendor/
 
 # Contributor / planning docs (internal)
 docs/
+_references/
 README.md
 
 # AI assistant + spec-kit tooling (never ships in a production plugin)

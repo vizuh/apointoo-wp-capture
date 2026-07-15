@@ -24,16 +24,24 @@ use Apointoo\Capture\Capture\Attribution;
 
 $_COOKIE['apointoo_capture'] = json_encode(
 	array(
+		'visitor_id' => 'visitor-1',
+		'session_id' => 'session-1',
 		'gclid'      => 'gclid-1',
 		'gbraid'     => 'gbraid-1',
 		'utm_source' => 'google',
+		'ft_channel' => 'organic_search',
+		'lt_channel' => 'paid_search',
 	)
 );
 
 $denied = Attribution::to_intake_payload();
 assert( ! isset( $denied['gclid'] ) );
 assert( ! isset( $denied['gbraid'] ) );
+assert( 'visitor-1' === $denied['visitorId'] );
+assert( 'session-1' === $denied['sessionId'] );
 assert( 'google' === $denied['utmSource'] );
+assert( 'organic_search' === $denied['ft_channel'] );
+assert( 'paid_search' === $denied['lt_channel'] );
 assert( 'denied' === $denied['consent']['adUserData'] );
 
 $GLOBALS['apointoo_test_consent'] = array( 'marketing' => true, 'statistics' => true );
