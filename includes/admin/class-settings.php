@@ -24,10 +24,11 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class Settings {
 
-	const OPTION = 'apointoo_capture_settings';
-	const GROUP  = 'apointoo_capture';
-	const PAGE   = 'apointoo-capture';
-	const CAP    = 'manage_options';
+	const OPTION      = 'apointoo_capture_settings';
+	const GROUP       = 'apointoo_capture';
+	const PAGE        = 'apointoo-capture';
+	const CAP         = 'manage_options';
+	const INTAKE_HOST = 'dash.apointoo.com';
 
 	/**
 	 * Register admin hooks.
@@ -122,29 +123,6 @@ class Settings {
 		);
 
 		add_settings_section(
-			'apointoo_capture_smtp',
-			__( 'Email (SMTP)', 'apointoo-capture' ),
-			array( $this, 'section_smtp' ),
-			self::PAGE
-		);
-
-		add_settings_field(
-			'smtp_user',
-			__( 'SMTP username', 'apointoo-capture' ),
-			array( $this, 'field_smtp_user' ),
-			self::PAGE,
-			'apointoo_capture_smtp'
-		);
-
-		add_settings_field(
-			'smtp_pass',
-			__( 'SMTP password', 'apointoo-capture' ),
-			array( $this, 'field_smtp_pass' ),
-			self::PAGE,
-			'apointoo_capture_smtp'
-		);
-
-		add_settings_section(
 			'apointoo_capture_forms',
 			__( 'Form integrations', 'apointoo-capture' ),
 			array( $this, 'section_forms' ),
@@ -164,69 +142,6 @@ class Settings {
 			'apointoo-capture'
 		);
 		echo '</p>';
-	}
-
-	/**
-	 * SMTP section description.
-	 *
-	 * @return void
-	 */
-	public function section_smtp() {
-		echo '<p>';
-		echo esc_html__(
-			'Optional. When credentials are saved the plugin takes over wp_mail() via Brevo SMTP — deactivate WP Mail SMTP if also installed.',
-			'apointoo-capture'
-		);
-		echo '</p>';
-
-		$saved = $this->get_settings();
-		$host  = isset( $saved['smtp_host'] ) ? $saved['smtp_host'] : 'smtp-relay.brevo.com';
-		$port  = isset( $saved['smtp_port'] ) ? $saved['smtp_port'] : '587';
-		printf(
-			'<details style="margin-bottom:1em"><summary style="cursor:pointer;color:#2271b1">%s</summary>
-<table class="form-table" style="margin-top:.5em"><tbody>
-<tr><th scope="row">%s</th><td><input type="text" class="regular-text" name="%s[smtp_host]" value="%s" /></td></tr>
-<tr><th scope="row">%s</th><td><input type="number" class="small-text" name="%s[smtp_port]" value="%s" min="1" max="65535" /></td></tr>
-</tbody></table></details>',
-			esc_html__( 'Advanced', 'apointoo-capture' ),
-			esc_html__( 'SMTP host', 'apointoo-capture' ),
-			esc_attr( self::OPTION ),
-			esc_attr( $host ),
-			esc_html__( 'SMTP port', 'apointoo-capture' ),
-			esc_attr( self::OPTION ),
-			esc_attr( (string) $port )
-		);
-	}
-
-	/**
-	 * Render SMTP username field.
-	 *
-	 * @return void
-	 */
-	public function field_smtp_user() {
-		$saved = $this->get_settings();
-		$value = isset( $saved['smtp_user'] ) ? $saved['smtp_user'] : '';
-		printf(
-			'<input type="text" class="regular-text" name="%1$s[smtp_user]" value="%2$s" autocomplete="off" />',
-			esc_attr( self::OPTION ),
-			esc_attr( $value )
-		);
-	}
-
-	/**
-	 * Render SMTP password field (write-only).
-	 *
-	 * @return void
-	 */
-	public function field_smtp_pass() {
-		$saved       = $this->get_settings();
-		$has         = ! empty( $saved['smtp_pass'] );
-		$placeholder = $has ? __( 'Saved — leave blank to keep current', 'apointoo-capture' ) : '';
-		printf(
-			'<input type="password" class="regular-text" name="%1$s[smtp_pass]" value="" autocomplete="new-password" placeholder="%2$s" />',
-			esc_attr( self::OPTION ),
-			esc_attr( $placeholder )
-		);
 	}
 
 	/**
@@ -357,24 +272,36 @@ class Settings {
 
 		// Strip whitespace and any trailing colon that gets copied when the key
 		// is pasted from a KEY: value env snippet.
-		$out['site_key']  = isset( $input['site_key'] ) ? rtrim( sanitize_text_field( $input['site_key'] ), ': ' ) : '';
+		$out['site_key'] = isset( $input['site_key'] ) ? rtrim( sanitize_text_field( $input['site_key'] ), ': ' ) : '';
 		// Append /contact if the URL ends at the tenant slug (no path segment).
-		$raw_url = isset( $input['sdk_url'] ) ? esc_url_raw( trim( $input['sdk_url'] ) ) : '';
+		$submitted_url = isset( $input['sdk_url'] ) ? trim( (string) $input['sdk_url'] ) : '';
+		$raw_url       = esc_url_raw( $submitted_url, array( 'https' ) );
+		if ( '' !== $submitted_url && '' === $raw_url ) {
+			add_settings_error(
+				self::OPTION,
+				'apointoo_capture_invalid_endpoint',
+				__( 'Use the HTTPS intake URL issued by dash.apointoo.com.', 'apointoo-capture' )
+			);
+			$raw_url = isset( $saved['sdk_url'] ) ? (string) $saved['sdk_url'] : '';
+		}
 		if ( '' !== $raw_url ) {
-			$path    = (string) ( wp_parse_url( $raw_url, PHP_URL_PATH ) ?: '' );
+			$path = wp_parse_url( $raw_url, PHP_URL_PATH );
+			$path = is_string( $path ) ? $path : '';
 			if ( ! str_ends_with( $path, '/contact' ) ) {
 				$raw_url = rtrim( $raw_url, '/' ) . '/contact';
 			}
+			$host = strtolower( (string) wp_parse_url( $raw_url, PHP_URL_HOST ) );
+			if ( self::INTAKE_HOST !== $host ) {
+				add_settings_error(
+					self::OPTION,
+					'apointoo_capture_invalid_endpoint',
+					__( 'Use the HTTPS intake URL issued by dash.apointoo.com.', 'apointoo-capture' )
+				);
+				$raw_url = isset( $saved['sdk_url'] ) ? (string) $saved['sdk_url'] : '';
+			}
 		}
 		$out['sdk_url'] = $raw_url;
-		$out['debug']     = empty( $input['debug'] ) ? 0 : 1;
-		$out['smtp_host'] = isset( $input['smtp_host'] ) ? sanitize_text_field( $input['smtp_host'] ) : 'smtp-relay.brevo.com';
-		$out['smtp_port'] = isset( $input['smtp_port'] ) ? absint( $input['smtp_port'] ) : 587;
-		$out['smtp_user'] = isset( $input['smtp_user'] ) ? sanitize_email( $input['smtp_user'] ) : '';
-
-		// smtp_pass is write-only: preserve stored value when field is left blank.
-		$smtp_pass = isset( $input['smtp_pass'] ) ? trim( (string) $input['smtp_pass'] ) : '';
-		$out['smtp_pass'] = '' === $smtp_pass ? ( isset( $saved['smtp_pass'] ) ? $saved['smtp_pass'] : '' ) : sanitize_text_field( $smtp_pass );
+		$out['debug']   = empty( $input['debug'] ) ? 0 : 1;
 
 		return $out;
 	}
@@ -465,11 +392,11 @@ class Settings {
 		echo '<th>' . esc_html__( 'Attrib', 'apointoo-capture' ) . '</th>';
 		echo '</tr></thead><tbody>';
 		foreach ( $rows as $r ) {
-			$ok     = ! empty( $r['ok'] );
-			$code   = isset( $r['code'] ) ? (int) $r['code'] : 0;
-			$label  = ( $ok ? '✓ ' : '✗ ' ) . ( $code ? $code : '—' );
-			$detail = '' !== (string) ( $r['wp_error'] ?? '' ) ? (string) $r['wp_error'] : (string) ( $r['body'] ?? '' );
-			$attr   = isset( $r['attr_count'] ) ? (int) $r['attr_count'] : 0;
+			$ok        = ! empty( $r['ok'] );
+			$code      = isset( $r['code'] ) ? (int) $r['code'] : 0;
+			$label     = ( $ok ? '✓ ' : '✗ ' ) . ( $code ? $code : '—' );
+			$detail    = '' !== (string) ( $r['wp_error'] ?? '' ) ? (string) $r['wp_error'] : (string) ( $r['body'] ?? '' );
+			$attr      = isset( $r['attr_count'] ) ? (int) $r['attr_count'] : 0;
 			$attrlabel = ( 0 === $attr && empty( $r['has_identity'] ) ) ? '0 (no cookie)' : (string) $attr;
 			printf(
 				'<tr><td>%1$s</td><td>%2$s</td><td>%3$s</td><td style="color:%4$s">%5$s</td><td>%6$s</td><td>%7$s</td><td>%8$s</td><td>%9$s</td></tr>',
@@ -520,7 +447,7 @@ class Settings {
 				'email'   => 'test+' . time() . '@apointoo.com',
 				'message' => 'Send-test from Apointoo Capture (WordPress).',
 			);
-			$response = wp_remote_post(
+			$response    = wp_safe_remote_post(
 				$intake_url,
 				array(
 					'headers'  => array(
@@ -556,15 +483,15 @@ class Settings {
 				$entry['wp_error']  = $result['wp_error'];
 				$entry['body']      = '';
 			} else {
-				$code            = (int) wp_remote_retrieve_response_code( $response );
-				$body            = substr( (string) wp_remote_retrieve_body( $response ), 0, 500 );
-				$result['ok']    = ( $code >= 200 && $code < 300 );
-				$result['code']  = $code;
-				$result['body']  = $body;
-				$entry['ok']     = $result['ok'];
-				$entry['code']   = $code;
+				$code              = (int) wp_remote_retrieve_response_code( $response );
+				$body              = substr( (string) wp_remote_retrieve_body( $response ), 0, 500 );
+				$result['ok']      = ( $code >= 200 && $code < 300 );
+				$result['code']    = $code;
+				$result['body']    = $body;
+				$entry['ok']       = $result['ok'];
+				$entry['code']     = $code;
 				$entry['wp_error'] = '';
-				$entry['body']   = $body;
+				$entry['body']     = $body;
 			}
 			Forward_Log::record( $entry );
 		}

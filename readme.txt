@@ -1,5 +1,5 @@
 === Apointoo Capture ===
-Contributors: apointoo
+Contributors: hugoc
 Tags: attribution, conversion tracking, forms, consent, leads
 Requires at least: 6.4
 Tested up to: 7.0
@@ -8,13 +8,19 @@ Stable tag: 0.5.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Connect your existing WordPress forms to Apointoo — server-side, consent-aware lead capture. A capture/wiring adapter, not a form builder.
+Keep attribution with existing WordPress forms and optionally send consent-aware leads to Apointoo.
 
 == Description ==
 
-Apointoo Capture forwards leads from the forms you already use (Contact Form 7,
+Apointoo Capture keeps first-touch and last-touch attribution with the forms you
+already use (Contact Form 7,
 WPForms, Gravity Forms, Elementor Pro, Fluent Forms, Ninja Forms, and Kadence Blocks) to
-the Apointoo dashboard contact intake — server-side and consent-aware.
+make campaign context available in the site owner's existing form records and email.
+
+This local attribution capture works without an Apointoo account and makes no
+external request. When an administrator deliberately configures an Apointoo
+tenant key and HTTPS intake URL, the plugin also forwards form leads to the
+Apointoo dashboard contact intake server-side and consent-aware.
 
 It adapts to forms that already exist; it never creates, renders, or manages a
 form, a booking, or any submission UI.
@@ -37,8 +43,9 @@ marketing attribution, and the visitor's consent state. Ad identifiers are only 
 consent is granted; UTMs and first-party journey context remain available. Google match identifiers are
 normalized and hashed by the dashboard. Nothing is sent until you configure the plugin.
 
-* Terms of Use: https://apointoo.com/terms
-* Privacy Policy: https://apointoo.com/privacy
+* Service: https://www.apointoo.com/
+* Terms of Use: https://www.apointoo.com/en/terms
+* Privacy Policy: https://www.apointoo.com/en/privacy
 
 == Installation ==
 
@@ -97,16 +104,3 @@ Cookiebot) and only forwards ad identifiers when marketing consent is granted.
 * Initial scaffold: form-adapter framework (CF7 working; WPForms/Gravity/
   Elementor/Fluent stubbed), PII hashing, consent reader. Transport to the SDK
   is stubbed pending the public capture contract.
-
-<!--
-  ── INTERNAL NOTE ───────────────────────────────────────────────────────────
-  Free capture-and-send connector (the paid product is the Apointoo service).
-  Now licensed GPLv2-or-later to pursue the wordpress.org directory (requesting
-  access + SVN repo). See docs/PLAN.md §8 + docs/WP-ORG-SUBMISSION.md.
-
-  Before actually submitting:
-    - It must be production-ready, NOT a stub — build the real transport (M1).
-    - Make https://apointoo.com/terms and /privacy live pages (the ToU/privacy
-      links above must resolve — G6/G7).
-    - Confirm the wp.org account "apointoo" (support@apointoo.com) is registered.
--->

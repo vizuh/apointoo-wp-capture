@@ -1,98 +1,68 @@
-# WordPress.org submission — pre-flight checklist
+# WordPress.org submission pre-flight
 
-Grounded in the **Detailed Plugin Guidelines**, **Plugin Developer FAQ**, and **Security handbook**
-(reviewed 2026-05-30). Status legend: ✅ done · ⚠ do-before-submit · ⛔ hard blocker (auto-rejection).
+Last verified: 2026-07-16 against the current submission page, Detailed Plugin Guidelines,
+Plugin Developer FAQ, official readme validator, and Plugin Check 2.0.0.
 
-## Verdict: NOT submittable yet — two ⛔ blockers
+## Verdict
 
-- ⛔ → ✅ **"Does nothing" resolved by the FREE TIER (2026-05-30 model change).** The plugin no longer depends
-  on the Apointoo service to be useful: the **free tier** captures attribution and **injects it as hidden
-  fields into the site's existing forms**, delivering richer leads to the *owner's own systems* with **no
-  external calls**. That is a complete, useful, standalone plugin (G16/G5/G6/G7 satisfied) — and it has **no
-  dependency on the Apointoo capture contract**, so it is buildable + submittable now. The Apointoo send is an
-  opt-in layer, off by default.
-- ⛔ **Still required: build the free tier itself.** The current code captures form fields on submit but the
-  attribution-capture + hidden-field *injection* (the `populate_fields` half) and a small JS tracker are not
-  built yet. Until they are, the plugin is a placeholder — wp.org rejects placeholders. **This is the real
-  pre-submission build, and it does NOT need the SDK contract.**
+The `0.5.0` ZIP is technically ready for manual submission after the release branch is committed/merged.
+No code, packaging, readme, license, or external-service blocker remains.
 
-**So wp.org submission is gated on building the free tier (local, contract-independent) — not on M1.** The
-Apointoo transport stays stubbed/optional.
+One Plugin Check runtime warning is intentionally accepted: `EnqueuedScriptsScope` for
+`assets/js/tracker.js`. The tracker must load across the public site to capture the landing visit and preserve
+first/last-touch attribution before the visitor reaches a form. The script is local, deferred, and does not
+contact Apointoo unless an administrator configures the service.
 
-## Naming & ownership — actionable NOW (independent of code)
+## Verified release
 
-- ✅ **Account: wp.org username `apointoo`, email `support@apointoo.com`.** The `@apointoo.com` domain matches
-  the plugin brand exactly, proving ownership of "Apointoo" (G17) and avoiding the gmail
-  trademark-infringement flag. `Contributors: apointoo` + the `Author: Apointoo` header are aligned to this.
-  *(Verify the wp.org account is actually registered as `apointoo` with that email before submitting.)*
-- ✅ **Brand-first name, not generic.** "Apointoo Capture" → slug `apointoo-capture` (derived from the
-  `Plugin Name` header; **permanent once approved**; changeable once *before* review). Note: the wp.org slug is
-  `apointoo-capture`, not the repo name `apointoo-wp-capture`.
-- ✅ **Text domain matches the slug** (`apointoo-capture`).
+- Artifact: `dist/apointoo-capture-0.5.0.zip`.
+- Plugin name/slug/text domain: `Apointoo Capture` / `apointoo-capture` / `apointoo-capture`.
+- License: GPLv2 or later in the plugin header, `readme.txt`, and `LICENSE`.
+- Requirements: WordPress 6.4+, PHP 8.0+, tested through WordPress 7.0.
+- Package: one `apointoo-capture/` root, runtime files only, about 152 KB uncompressed.
+- The local attribution feature works without an Apointoo account or external request.
+- Connected mode sends form lead fields and consent-aware attribution only after an administrator saves an
+  Apointoo tenant key and HTTPS intake URL.
+- Intake URLs are restricted to `https://dash.apointoo.com`; outbound posts use `wp_safe_remote_post()`.
+- No remote executable code, bundled WordPress libraries, public credits, license gates, trials, quotas, or
+  unrelated SMTP behavior.
 
-## License & openness
+## External-service disclosure
 
-- ⚠ **Switch `LICENSE` → GPLv2-or-later (G1).** Everything shipped (PHP, JS, CSS, images) must be
-  GPL-compatible. This kills the split/proprietary-JS idea for the wp.org build.
-- ✅ **Human-readable (G4).** phpcs-clean, no obfuscation. If the tracker JS is minified, ship the source or
-  link it (FAQ allows minified *only* with source available).
-- ✅ Repo goes **public** if accepted.
+- Service: https://www.apointoo.com/
+- Terms: https://www.apointoo.com/en/terms (HTTP 200 verified 2026-07-16)
+- Privacy: https://www.apointoo.com/en/privacy (HTTP 200 verified 2026-07-16)
+- Both legal pages identify Apointoo as operated by Vizuh OÜ.
 
-## Code & security — the top-3 rejection reasons
+## Naming and ownership
 
-FAQ: the three most common rejections are **unescaped output, unsanitised input, form data without a nonce.**
+- Submit with the existing WordPress.org account `hugoc` (`hugo@vizuh.com`), not the nonexistent `apointoo`
+  account. `Contributors: hugoc` matches the verified profile.
+- The `hugoc` profile identifies Hugo as Vizuh's founder and links to `vizuh.com`; Apointoo's legal pages identify
+  Vizuh OÜ as operator. Keep this evidence ready if the reviewer asks for Guideline 17 ownership proof.
+- The requested permanent slug is `apointoo-capture`. Confirm it before final submission.
 
-- ⚠ **Settings screen (not built):** `current_user_can('manage_options')` + nonce on save + sanitise every
-  field + escape every output.
-- ⚠ **`/wp-json` proxy (not built):** nonce + `permission_callback` + sanitise body + escape; never carries the
-  secret (C1); conversion/PII server-side only (C2).
-- ✅ **Form adapters / PII:** input sanitised, PII hashed in PHP (B5). CF7 done; others stubbed.
-- ⚠ **Escape late, on output** — audit every admin/display string.
-- ✅ **No remote code (G8):** tracker JS bundled locally; only data POSTed to the SDK; no third-party CDN (fonts
-  excepted); no iframes for admin pages.
-- ✅ **No bundled core libs (G13).**
+## Checks run
 
-## SaaS-connector compliance (G6 — what makes us acceptable)
+- Install and activation on WordPress 7.0.1: pass.
+- Plugin Check 2.0.0 static checks: pass.
+- Plugin Check 2.0.0 runtime checks: one accepted `EnqueuedScriptsScope` warning; no other findings.
+- Official WordPress readme validator: no errors or warnings; only optional missing sections (upgrade notice,
+  screenshots, donate link).
+- WordPress Coding Standards PHPCS: pass, 23/23 files.
+- PHPCompatibilityWP for PHP 8.0+: pass, 23/23 files.
+- PHP 8.0 attribution/consent contract: pass.
+- PHP 8.0 endpoint allowlist contract: pass.
+- JavaScript channel-bucket/form-injection contract: pass.
+- ZIP integrity and `git diff --check`: pass.
 
-- ✅ **The Apointoo service provides substantive functionality** (ledger, offline-conversion upload,
-  identity/outcome resolution) — not a fake license-check service, not a storefront, not "code moved out to
-  fake a service." On the right side of G6.
-- ⚠ **readme.txt must document the service + link its Terms of Use + privacy policy (G6/G7).** Add the Apointoo
-  ToU + privacy URLs.
-- ✅ **Consent to "phone home" (G7)** is granted by configuring the plugin (entering credentials = registration);
-  nothing fires until configured — keep that, and document the data flow in the readme.
-- ✅ **Not trialware (G5):** the plugin is fully free + functional; payment lives on the service.
-- ✅ **Upsell discipline (G10/G11):** any "get Apointoo" prompt is opt-in, dismissible, contextual — no admin
-  hijacking, no forced front-end credits.
+## Manual submission gate
 
-## readme.txt
-
-- ⚠ **Stable tag** = the released version (never "trunk").
-- ⚠ **Tested up to** = a real current WP version (not a future one) — update from `6.7` at submission.
-- ✅ **Requires PHP / Requires at least** present (8.0 / 6.4).
-- ⚠ **License** → GPLv2-or-later (currently Proprietary).
-- ⚠ **Service + ToU/privacy disclosure** (G6/G7).
-- ✅ **≤12 tags** (5 shown).
-- ⚠ **Changelog** (Keep-a-Changelog style; current + one major back).
-
-## Packaging (FAQ / SVN)
-
-- ✅ **`.distignore` excludes dev cruft** (vendor/, tests/, docs/, .github/, composer/phpcs) → keeps the ZIP
-  <10 MB and free of development tools.
-- ⚠ **Installable via "Upload Plugin"** — the root plugin file + readme.txt go in **trunk/ root** (not a
-  subdirectory of trunk).
-- ✅ **Increment version each release (G15).**
-
-## Process
-
-- Initial response ≤14 days; iterate by email; auto-rejected after 3 months of inactivity (re-submittable).
-- **One plugin in review at a time.**
-- Slug permanent once approved (changeable once before review).
-- Whitelist `plugins@wordpress.org`; keep the account email human-monitored (no autoresponders).
-
----
-
-**Bottom line:** the *strategy and structure are compliant* — a SaaS connector is explicitly allowed (G6). The
-gate is **build the real, production-ready capture-and-send path (M1)**, then **submit from a Vizuh email**, as
-**GPLv2-or-later**, with the **Apointoo ToU/privacy disclosed** in the readme. Do not submit a stub — it is an
-automatic rejection.
+1. Commit and merge the release diff; rebuild the ZIP from that exact commit.
+2. Confirm no other plugin is currently awaiting first review on `hugoc`.
+3. Confirm the WordPress.org profile email remains human-monitored and whitelist `plugins@wordpress.org`.
+4. On the submission page, acknowledge the FAQ, guidelines, Plugin Check result, naming ownership, trialware,
+   and directory-compliance statements.
+5. Upload `dist/apointoo-capture-0.5.0.zip`; request/confirm slug `apointoo-capture`.
+6. Do not push to the assigned SVN repository until the plugin is ready to go live; then publish finished code in
+   `trunk/` and tag `0.5.0` with matching stable tag/version.
