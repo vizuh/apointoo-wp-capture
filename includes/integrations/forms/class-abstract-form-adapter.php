@@ -203,7 +203,7 @@ abstract class Abstract_Form_Adapter implements Form_Adapter_Interface {
 			return;
 		}
 
-		$response = wp_remote_post(
+		$response = wp_safe_remote_post(
 			$intake_url,
 			array(
 				'headers'  => array(

@@ -163,7 +163,12 @@ class CF7_Adapter extends Abstract_Form_Adapter {
 			return;
 		}
 
-		$lead = array( 'name' => '', 'email' => '', 'phone' => '', 'message' => '' );
+		$lead = array(
+			'name'    => '',
+			'email'   => '',
+			'phone'   => '',
+			'message' => '',
+		);
 
 		foreach ( $fields as $key => $value ) {
 			$value = trim( (string) $value );

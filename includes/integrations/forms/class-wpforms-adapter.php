@@ -142,7 +142,12 @@ class WPForms_Adapter extends Abstract_Form_Adapter {
 			return;
 		}
 
-		$lead = array( 'name' => '', 'email' => '', 'phone' => '', 'message' => '' );
+		$lead = array(
+			'name'    => '',
+			'email'   => '',
+			'phone'   => '',
+			'message' => '',
+		);
 
 		if ( is_array( $fields ) ) {
 			foreach ( $fields as $field ) {

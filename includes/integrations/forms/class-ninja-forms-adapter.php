@@ -109,12 +109,24 @@ class Ninja_Forms_Adapter extends Abstract_Form_Adapter {
 		$this->maybe_forward_to_apointoo( $flat, $form_id );
 	}
 
-		private function maybe_forward_to_apointoo( array $flat, $form_id = 0 ): void {
+	/**
+	 * Forward the normalized Ninja Forms fields to Apointoo when configured.
+	 *
+	 * @param array<string, string> $flat    Submitted fields.
+	 * @param int                   $form_id Ninja Forms form ID.
+	 * @return void
+	 */
+	private function maybe_forward_to_apointoo( array $flat, $form_id = 0 ): void {
 		if ( ! $this->is_intake_configured() ) {
 			return;
 		}
 
-		$lead = array( 'name' => '', 'email' => '', 'phone' => '', 'message' => '' );
+		$lead = array(
+			'name'    => '',
+			'email'   => '',
+			'phone'   => '',
+			'message' => '',
+		);
 
 		foreach ( $flat as $k => $value ) {
 			$value = trim( (string) $value );
