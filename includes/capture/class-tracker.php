@@ -38,7 +38,10 @@ class Tracker {
 			APOINTOO_CAPTURE_URL . 'assets/js/tracker.js',
 			array(),
 			APOINTOO_CAPTURE_VERSION,
-			true
+			array(
+				'strategy'  => 'defer',
+				'in_footer' => true,
+			)
 		);
 
 		wp_add_inline_script(

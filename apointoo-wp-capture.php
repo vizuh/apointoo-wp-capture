@@ -64,9 +64,12 @@ apointoo_capture_bootstrap();
 /**
  * Set first-run redirect flag on activation (ADR-001).
  */
-register_activation_hook( __FILE__, function () {
-	add_option( 'apointoo_capture_activation_redirect', true );
-} );
+register_activation_hook(
+	__FILE__,
+	function () {
+		add_option( 'apointoo_capture_activation_redirect', true );
+	}
+);
 
 /**
  * Initialise the plugin once WordPress is ready.
