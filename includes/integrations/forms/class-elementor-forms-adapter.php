@@ -86,9 +86,9 @@ class Elementor_Forms_Adapter extends Abstract_Form_Adapter {
 			);
 		}
 
-		$flat     = array();
-		$raw      = method_exists( $record, 'get' ) ? (array) $record->get( 'fields' ) : array();
-		$form_id  = method_exists( $record, 'get_form_settings' ) ? (int) ( $record->get_form_settings( 'id' ) ?? 0 ) : 0;
+		$flat    = array();
+		$raw     = method_exists( $record, 'get' ) ? (array) $record->get( 'fields' ) : array();
+		$form_id = method_exists( $record, 'get_form_settings' ) ? (int) ( $record->get_form_settings( 'id' ) ?? 0 ) : 0;
 		foreach ( $raw as $id => $field ) {
 			$value = is_array( $field ) ? trim( (string) ( $field['value'] ?? '' ) ) : '';
 			if ( '' === $value ) {
@@ -106,12 +106,24 @@ class Elementor_Forms_Adapter extends Abstract_Form_Adapter {
 		$this->maybe_forward_to_apointoo( $flat, $form_id );
 	}
 
-		private function maybe_forward_to_apointoo( array $flat, $form_id = 0 ): void {
+	/**
+	 * Forward the normalized Elementor fields to Apointoo when configured.
+	 *
+	 * @param array<string, string> $flat    Submitted fields.
+	 * @param int                   $form_id Elementor form ID.
+	 * @return void
+	 */
+	private function maybe_forward_to_apointoo( array $flat, $form_id = 0 ): void {
 		if ( ! $this->is_intake_configured() ) {
 			return;
 		}
 
-		$lead = array( 'name' => '', 'email' => '', 'phone' => '', 'message' => '' );
+		$lead = array(
+			'name'    => '',
+			'email'   => '',
+			'phone'   => '',
+			'message' => '',
+		);
 
 		foreach ( $flat as $k => $value ) {
 			$value = trim( (string) $value );
