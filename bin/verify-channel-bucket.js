@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Smoke-check for ft_channel/lt_channel bucketing + window.apointooTracking().
+ * Smoke-check for channel bucketing, consent gating, and window.apointooTracking().
  *
  * Loads the REAL assets/js/tracker.js (not a reimplementation) into a minimal
  * fake browser global, drives one page load per case, and asserts the bucket
@@ -18,10 +18,12 @@ const vm = require( 'vm' );
 
 const SCRIPT = fs.readFileSync( path.join( __dirname, '..', 'assets/js/tracker.js' ), 'utf8' );
 
-function runCase( { search = '', referrer = '', host = 'client-site.example' }, cookies = {} ) {
+function runCase( { search = '', referrer = '', host = 'client-site.example', consent = null }, cookies = {} ) {
 	const sandbox = {
 		URL,
 		URLSearchParams,
+		setInterval: () => 1,
+		clearInterval() {},
 		console,
 		navigator: { userAgent: 'node-verify', webdriver: false },
 		document: {
@@ -48,6 +50,10 @@ function runCase( { search = '', referrer = '', host = 'client-site.example' }, 
 		location: { href: 'https://' + host + '/' + search, search, hostname: host, protocol: 'https:', pathname: '/' },
 		addEventListener() {},
 	};
+	if ( consent ) {
+		sandbox.window.ApointooCaptureConfig = { consent: { require: 'always' } };
+		sandbox.window.dataLayer = [ [ 'consent', 'default', consent ] ];
+	}
 	sandbox.window.crypto = undefined; // fall back to Math.random path
 	vm.createContext( sandbox );
 	vm.runInContext( SCRIPT, sandbox, { filename: 'tracker.js' } );
@@ -83,6 +89,27 @@ for ( const c of cases ) {
 // window.apointooTracking() must never throw, even pre-init.
 assert.doesNotThrow( () => runCase( {} ) );
 console.log( 'PASS', 'apointooTracking() does not throw on a signal-less page load' );
+
+// Consent Mode v2 can expose mixed values. Any explicit denial must win so an
+// ad identifier is never persisted when either relevant storage/use signal says no.
+{
+	const denied = runCase( {
+		search: '?gclid=abc',
+		consent: { ad_storage: 'granted', ad_user_data: 'denied' },
+	} );
+	const granted = runCase( {
+		search: '?gclid=abc',
+		consent: { ad_storage: 'granted', ad_user_data: 'granted' },
+	} );
+	try {
+		assert.strictEqual( denied.gclid, undefined );
+		assert.strictEqual( granted.gclid, 'abc' );
+		console.log( 'PASS', 'Consent Mode mixed denial blocks persistence' );
+	} catch ( e ) {
+		failed++;
+		console.error( 'FAIL', 'Consent Mode mixed denial', '-', e.message );
+	}
+}
 
 // The core semantic under test: ft_channel is write-once, lt_channel refreshes
 // every signal-bearing visit. Share one cookie jar across two page loads to

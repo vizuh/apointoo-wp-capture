@@ -27,3 +27,6 @@ jobs:
 
       - name: Run PHPCS
         run: composer run phpcs
+
+      - name: Run contract checks
+        run: composer run test

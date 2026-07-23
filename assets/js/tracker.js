@@ -837,10 +837,10 @@
 				}
 				var adUserData = payload.ad_user_data;
 				var adStorage = payload.ad_storage;
-				if ( adUserData === 'granted' || adStorage === 'granted' ) {
-					resolved = true;
-				} else if ( adUserData === 'denied' || adStorage === 'denied' ) {
+				if ( adUserData === 'denied' || adStorage === 'denied' ) {
 					resolved = false;
+				} else if ( adUserData === 'granted' || adStorage === 'granted' ) {
+					resolved = true;
 				}
 			}
 			return resolved;
