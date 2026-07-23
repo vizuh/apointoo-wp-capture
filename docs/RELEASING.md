@@ -5,8 +5,8 @@ from the matching Git tag.
 
 ## Version buffer
 
-0.5.0 is the first WordPress.org release, so it may publish immediately after its release checks pass. From
-0.6.0 onward, cut and test the release on staging for 3–5 days before replacing the live SVN tag.
+0.5.0 was the first WordPress.org release. Correctness and security patches may publish after their release
+checks pass; stage feature releases on a real site for 3–5 days before replacing the live SVN tag.
 
 ## Cut the GitHub release
 

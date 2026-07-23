@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Apointoo Capture
  * Description:       Connects existing WordPress forms to the Apointoo capture contract. A capture/wiring adapter — NOT a form builder.
- * Version:           0.5.0
+ * Version:           0.5.1
  * Requires at least: 6.4
  * Requires PHP:      8.0
  * Author:            Apointoo
