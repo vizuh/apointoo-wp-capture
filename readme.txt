@@ -4,7 +4,7 @@ Tags: attribution, conversion tracking, forms, consent, leads
 Requires at least: 6.4
 Tested up to: 7.0
 Requires PHP: 8.0
-Stable tag: 0.5.0
+Stable tag: 0.5.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -67,6 +67,11 @@ Yes. It reads your existing consent plugin (WP Consent API / Complianz /
 Cookiebot) and only forwards ad identifiers when marketing consent is granted.
 
 == Changelog ==
+
+= 0.5.1 =
+* Make explicit Consent Mode denial win when advertising storage and user-data signals conflict.
+* Revalidate the HTTPS Apointoo intake host immediately before sending the tenant key.
+* Correct setup instructions to match the tenant-key, intake-URL, and automatic-adapter UI.
 
 = 0.5.0 =
 * Add stable ft_channel/lt_channel buckets and window.apointooTracking() for integrations that need the full captured attribution record.
