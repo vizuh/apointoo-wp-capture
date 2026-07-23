@@ -40,3 +40,13 @@ _Downgraded (examined, not a vuln): the cross-domain decoration `getRegistrableD
 - **Wave C:** G5 send-time host re-check; public-suffix-list robustness.
 
 _Companion docs: `apointoo-dashboard/docs/audit-2026-07-22-multiagent-review.md`, `apointoo-rwg/docs/…`._
+
+## Remediation status — 2026-07-23
+
+- G1 partially closed: the existing PHP contracts and real-tracker JS check now run in CI; adapter extraction
+  and the legacy, currently unused PII hasher remain outside this release gate.
+- G2 closed: mixed Consent Mode states are deny-first and covered by the real-tracker check.
+- G3 closed: installation now matches the tenant-key + intake-URL UI and automatic adapter discovery.
+- G4 closed: the settings contract now describes the tenant-scoped intake key truthfully.
+- G5 closed: both live form forwarding and the admin test revalidate HTTPS + `dash.apointoo.com` immediately
+  before sending the tenant key.

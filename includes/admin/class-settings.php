@@ -17,10 +17,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Minimal options screen under Settings → Apointoo Capture.
  *
- * Stores the credentials the Apointoo dashboard issues (publishable site key +
- * server secret) and the SDK endpoint. The server secret is write-only in the UI
- * — it is never echoed back. Uses the Settings API, so nonce handling, capability
- * checks, and the save flow go through core `options.php`.
+ * Stores the tenant-scoped intake key and endpoint issued by the Apointoo
+ * dashboard. Uses the Settings API, so nonce handling, capability checks, and
+ * the save flow go through core `options.php`.
  */
 class Settings {
 
@@ -29,6 +28,20 @@ class Settings {
 	const PAGE        = 'apointoo-capture';
 	const CAP         = 'manage_options';
 	const INTAKE_HOST = 'dash.apointoo.com';
+
+	/**
+	 * Whether an intake URL is safe to receive the tenant key.
+	 *
+	 * Rechecked at send time because options can be written outside this settings
+	 * screen by WP-CLI, migrations, or another plugin.
+	 *
+	 * @param string $url Candidate intake URL.
+	 * @return bool
+	 */
+	public static function is_valid_intake_url( $url ): bool {
+		return 'https' === strtolower( (string) wp_parse_url( $url, PHP_URL_SCHEME ) )
+			&& self::INTAKE_HOST === strtolower( (string) wp_parse_url( $url, PHP_URL_HOST ) );
+	}
 
 	/**
 	 * Register admin hooks.
@@ -290,8 +303,7 @@ class Settings {
 			if ( ! str_ends_with( $path, '/contact' ) ) {
 				$raw_url = rtrim( $raw_url, '/' ) . '/contact';
 			}
-			$host = strtolower( (string) wp_parse_url( $raw_url, PHP_URL_HOST ) );
-			if ( self::INTAKE_HOST !== $host ) {
+			if ( ! self::is_valid_intake_url( $raw_url ) ) {
 				add_settings_error(
 					self::OPTION,
 					'apointoo_capture_invalid_endpoint',
@@ -438,8 +450,8 @@ class Settings {
 			'body'     => '',
 		);
 
-		if ( '' === $site_key || '' === $intake_url ) {
-			$result['wp_error'] = __( 'Site key or intake URL not set.', 'apointoo-capture' );
+		if ( '' === $site_key || ! self::is_valid_intake_url( $intake_url ) ) {
+			$result['wp_error'] = __( 'Site key or valid intake URL not set.', 'apointoo-capture' );
 		} else {
 			$attribution = Attribution::to_intake_payload();
 			$lead        = array(

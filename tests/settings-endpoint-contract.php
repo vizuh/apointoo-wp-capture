@@ -37,6 +37,10 @@ require_once dirname( __DIR__ ) . '/includes/admin/class-settings.php';
 use Apointoo\Capture\Admin\Settings;
 
 $settings = new Settings();
+assert( Settings::is_valid_intake_url( 'https://dash.apointoo.com/api/intake/example/contact' ) );
+assert( ! Settings::is_valid_intake_url( 'http://dash.apointoo.com/api/intake/example/contact' ) );
+assert( ! Settings::is_valid_intake_url( 'https://dash.apointoo.com.evil.example/api/intake/example/contact' ) );
+
 $valid    = $settings->sanitize(
 	array(
 		'site_key' => 'tenant-key',

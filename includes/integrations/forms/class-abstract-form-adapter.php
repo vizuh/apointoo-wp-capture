@@ -175,7 +175,7 @@ abstract class Abstract_Form_Adapter implements Form_Adapter_Interface {
 		$site_key   = isset( $settings['site_key'] ) ? trim( (string) $settings['site_key'] ) : '';
 		$intake_url = isset( $settings['sdk_url'] ) ? trim( (string) $settings['sdk_url'] ) : '';
 
-		if ( '' === $site_key || '' === $intake_url ) {
+		if ( '' === $site_key || ! Settings::is_valid_intake_url( $intake_url ) ) {
 			return;
 		}
 

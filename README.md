@@ -44,20 +44,15 @@ WordPress form hook
 Contract references:
 - SDK attribution shape — `vizuh/apointoo-sdk/src/core/schemas.ts`
 - Dashboard intake and Google upload behavior — `vizuh/apointoo-dashboard`
-- Historical design and current-contract corrections — [`docs/PLAN.md`](docs/PLAN.md)
 
 ## Distribution
 
-**A free, GPLv2-or-later capture-and-send connector** (refined 2026-05-30). The plugin is free; the paid
-product is the Apointoo **service** (SDK + dashboard). We're pursuing the **wordpress.org directory** (license
-flipped to GPL to request access + an SVN repo):
+**A free, GPLv2-or-later capture-and-send connector.** The plugin is free; the paid product is the Apointoo
+**service** (SDK + dashboard). Releases are developed on GitHub and published through the WordPress.org
+Subversion repository.
 
-- **wp.org accepts it** → also published on GitHub; updates via the directory.
-- **wp.org rejects / not pursued** → distribute by **ZIP** to clients (still GPL).
-
-Clients configure it with credentials issued by the **dashboard** (a publishable site key + a server secret);
-there is no paid license key. Full model, hardening, and the grounded pre-submission checklist:
-`docs/PLAN.md` §8 and [`docs/WP-ORG-SUBMISSION.md`](docs/WP-ORG-SUBMISSION.md).
+Clients configure it with a tenant key and HTTPS intake URL issued by the **dashboard**; there is no paid
+license key. Release mechanics: [`docs/RELEASING.md`](docs/RELEASING.md).
 
 ## Development
 
@@ -66,13 +61,14 @@ Conventions mirror `vizuh/click-trail-handler` (the house WordPress plugin): nam
 prefixes `apointoo_capture_` / `APOINTOO_CAPTURE_`.
 
 ```bash
-composer install        # dev tooling (phpcs, WPCS, phpcompatibility, phpunit)
+composer install        # dev tooling (phpcs, WPCS, PHPCompatibilityWP)
 composer run phpcs      # WordPress Coding Standards (currently clean)
 composer run phpcbf      # auto-fix what phpcs can
 composer run phpcompat  # PHP 8.0+ compatibility
+composer run test       # standalone PHP + real-tracker contract checks
 ```
 
-CI runs phpcs + PHP-compatibility on every push/PR (`.github/workflows/`). The repo currently passes both.
+CI runs PHPCS, PHP compatibility, and contract checks on every push/PR (`.github/workflows/`).
 No PHP runtime is required to develop the design — but the checks need PHP/Composer (or run them in a
 `docker.io/library/composer:2` container, as CI does).
 
@@ -85,15 +81,6 @@ No PHP runtime is required to develop the design — but the checks need PHP/Com
 - `marketingConsent` (email-list opt-in) is a separate form decision and is never inferred from CMP ad consent.
 - Customer Match audiences are not created by this plugin or by conversion upload; they require a separate
   tenant-facing purpose, consent, eligibility, and deletion workflow.
-- **DPIA:** [`docs/dpia.md`](docs/dpia.md). Dominant gaps: real **erasure** (crypto-shred, not just a
-  tombstone) and PII scrubbing of free-form fields **must land before any real (non-sandbox) PII flows.**
-
-## Open items
-
-- Final license terms (proprietary vs GPL-compatible) — placeholder `LICENSE` is proprietary for now.
-- Update-server / licensing mechanism (Plugin Update Checker vs custom).
-- Build the deferred security mitigations before M1 real-PII: PII scrub on `properties`/`traits` (I2),
-  erasure/crypto-shred path (I3), secret-leak anomaly detection (I4).
 
 ---
-© Vizuh OÜ. Proprietary — see [`LICENSE`](LICENSE).
+© Vizuh OÜ. GPLv2-or-later — see [`LICENSE`](LICENSE).

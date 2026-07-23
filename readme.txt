@@ -50,9 +50,9 @@ normalized and hashed by the dashboard. Nothing is sent until you configure the 
 == Installation ==
 
 1. Install and activate the plugin.
-2. In Settings → Apointoo Capture, enter your publishable site key and server
-   secret (from your Apointoo tenant).
-3. Enable the adapters for the form plugins you use.
+2. In Settings → Apointoo Capture, enter the tenant key and HTTPS intake URL
+   from your Apointoo tenant.
+3. Supported form plugins are detected and wired automatically.
 
 == Frequently Asked Questions ==
 

@@ -4,12 +4,10 @@
 .editorconfig
 .gitignore
 .distignore
-.phpunit.result.cache
 
 # Tests and CI config
 tests/
 phpcs.xml.dist
-phpunit.xml.dist
 
 # Composer dev dependencies and config
 composer.json
