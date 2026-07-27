@@ -21,9 +21,21 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Base class for every form adapter.
  *
- * Subclasses bind one server-side submit hook and call {@see capture()} with the
- * form's native field container; the base normalises it to a neutral {@see Lead}
- * (PII hashed, B5) and hands it to the transport (Path B — server secret).
+ * Two forward paths live here, and only one is wired today:
+ *
+ * - **Path A (LIVE)** — subclasses bind a server-side submit hook and call
+ *   {@see intake_send()}, which POSTs `{lead, attribution}` to the tenant's
+ *   Apointoo intake URL. Raw email/phone travel to the dashboard by design; the
+ *   dashboard owns Google-specific normalisation, hashing and upload so
+ *   WordPress is never a second conversion source.
+ * - **Path B (DEFERRED)** — {@see capture()} normalises a submission to a
+ *   neutral {@see Lead} carrying hashed identifiers only (B5) and hands it to
+ *   {@see Transport_Interface}, which holds the tenant server secret. This is
+ *   the intended capture path once the public contract lands; no subclass
+ *   calls it yet, because {@see SDK_Transport} is still a no-op stub.
+ *
+ * Do not delete the Path B members as dead code — see the DEFERRED note on
+ * {@see capture()}.
  */
 abstract class Abstract_Form_Adapter implements Form_Adapter_Interface {
 
@@ -58,7 +70,15 @@ abstract class Abstract_Form_Adapter implements Form_Adapter_Interface {
 	}
 
 	/**
-	 * Normalise a submitted form into a neutral lead and forward it.
+	 * Normalise a submitted form into a neutral lead and forward it (Path B).
+	 *
+	 * DEFERRED — Path B, blocked on the public capture contract
+	 * (vizuh/apointoo-sdk#116) + ADR-021 auth, same blocker documented on
+	 * {@see SDK_Transport}. No subclass calls this yet, so this method,
+	 * {@see extract_identity()} and {@see PII_Hasher} are currently unreachable.
+	 * That is parked scaffolding, NOT dead code — a 2026-07-26 audit mistook it
+	 * for an orphan and recommended deleting it. Path A ({@see intake_send()})
+	 * is what ships today.
 	 *
 	 * @param string|int           $form_id Form identifier (native to the plugin).
 	 * @param array<string, mixed> $fields  Flat field map (name => value).
