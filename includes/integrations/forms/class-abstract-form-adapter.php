@@ -21,9 +21,16 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Base class for every form adapter.
  *
- * Subclasses bind one server-side submit hook and call {@see capture()} with the
- * form's native field container; the base normalises it to a neutral {@see Lead}
- * (PII hashed, B5) and hands it to the transport (Path B — server secret).
+ * Two forward paths live here, and only one is wired today:
+ *
+ * - **Path A (LIVE)** — {@see intake_send()}. This is what concrete adapters
+ *   call today.
+ * - **Path B (DEFERRED)** — {@see capture()}, still parked. See the DEFERRED
+ *   note on that method for the blocker; do not delete its members as dead
+ *   code.
+ *
+ * Each path's own docblock is the source of truth for its behaviour — keeping
+ * that detail here is what let this class docblock go stale in the first place.
  */
 abstract class Abstract_Form_Adapter implements Form_Adapter_Interface {
 
@@ -58,7 +65,15 @@ abstract class Abstract_Form_Adapter implements Form_Adapter_Interface {
 	}
 
 	/**
-	 * Normalise a submitted form into a neutral lead and forward it.
+	 * Normalise a submitted form into a neutral lead and forward it (Path B).
+	 *
+	 * DEFERRED — Path B, blocked on the public capture contract
+	 * (vizuh/apointoo-sdk#116) + ADR-021 auth, the same blocker documented on
+	 * {@see SDK_Transport}. No concrete adapter calls this yet, which leaves
+	 * this method and its Path B-only helpers ({@see extract_identity()},
+	 * {@see PII_Hasher}) without a live caller. That is parked scaffolding, NOT
+	 * dead code — a 2026-07-26 audit mistook it for an orphan and recommended
+	 * deleting it. Path A ({@see intake_send()}) is what ships today.
 	 *
 	 * @param string|int           $form_id Form identifier (native to the plugin).
 	 * @param array<string, mixed> $fields  Flat field map (name => value).
