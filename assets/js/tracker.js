@@ -946,10 +946,14 @@
 			for ( var i = 0; i < KEYS.length; i++ ) {
 				var key = KEYS[ i ];
 				var value = data[ key ] ? String( data[ key ] ) : '';
+				var input = form.querySelector( 'input[name="' + PREFIX + key + '"]' );
 				if ( value === '' ) {
+					if ( input ) {
+						input.value = '';
+					}
 					continue;
 				}
-				var input = ensureHiddenInput( form, PREFIX + key );
+				input = input || ensureHiddenInput( form, PREFIX + key );
 				if ( input.value !== value ) {
 					input.value = value;
 				}
@@ -1234,14 +1238,8 @@
 			bufferPending( signal, referrer );
 		}
 
-		// 'auto' with NO CMP present: nothing to wait on, capture now (non-breaking).
-		if ( CONSENT_REQUIRE === 'auto' && ! Consent.detected() ) {
-			Engine.promote();
-			return;
-		}
-
-		// A CMP is present (or require === 'always'): only persist on an affirmative
-		// grant. An initial `false`/unresolved (e.g. a banner still showing) is NOT
+		// Only persist on an affirmative grant. An initial `false`/unresolved
+		// (e.g. no CMP or a banner still showing) is NOT
 		// treated as a final deny — we wait for a real decision.
 		if ( Consent.resolve() === true ) {
 			Engine.promote();
