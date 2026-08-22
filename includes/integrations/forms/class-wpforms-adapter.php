@@ -59,9 +59,9 @@ class WPForms_Adapter extends Abstract_Form_Adapter {
 	public function register_hooks() {
 		add_action( 'wpforms_process_complete', array( $this, 'on_process_complete' ), 10, 4 );
 
-		// Hidden-field population via WPForms Dynamic Population (works on Lite).
+		// Empty hidden fields let the consent-aware tracker populate per visitor.
 		// Operators configure a hidden field with parameter name e.g. "apointoo_gclid";
-		// WPForms calls wpforms_field_value_apointoo_gclid and we return the cookie value.
+		// WPForms renders the field, then the tracker fills it after consent.
 		foreach ( Attribution::keys() as $key ) {
 			add_filter(
 				'wpforms_field_value_' . Attribution::PREFIX . $key,
@@ -73,7 +73,7 @@ class WPForms_Adapter extends Abstract_Form_Adapter {
 	}
 
 	/**
-	 * Populate a WPForms hidden field from the attribution cookie.
+	 * Keep server-rendered WPForms hidden fields empty for page-cache safety.
 	 *
 	 * @param string $value     Current field value.
 	 * @param array  $field     Field settings.
@@ -81,9 +81,8 @@ class WPForms_Adapter extends Abstract_Form_Adapter {
 	 * @return string
 	 */
 	public function populate_field( $value, $field, $form_data ) {
-		$attribution = Attribution::from_cookie();
-		$key         = str_replace( 'wpforms_field_value_', '', current_filter() );
-		return isset( $attribution[ $key ] ) ? $attribution[ $key ] : $value;
+		unset( $value, $field, $form_data );
+		return '';
 	}
 
 	/**

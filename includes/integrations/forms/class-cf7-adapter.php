@@ -99,19 +99,18 @@ class CF7_Adapter extends Abstract_Form_Adapter {
 	/**
 	 * Add the attribution hidden fields to a Contact Form 7 form.
 	 *
-	 * Every managed key is emitted (empty or cookie-filled) so the tracker can
-	 * fill them client-side on the first visit; CF7 then submits them.
+	 * Every managed key is emitted empty so page caches cannot copy one
+	 * visitor's attribution into another visitor's form.
 	 *
 	 * @param array<string, string> $fields Existing hidden fields.
 	 * @return array<string, string>
 	 */
 	public function hidden_fields( $fields ) {
 		$fields = is_array( $fields ) ? $fields : array();
-		$attr   = Attribution::from_cookie();
 
 		foreach ( Attribution::keys() as $key ) {
 			$name            = Attribution::PREFIX . $key;
-			$fields[ $name ] = isset( $attr[ $name ] ) ? $attr[ $name ] : '';
+			$fields[ $name ] = '';
 		}
 
 		return $fields;

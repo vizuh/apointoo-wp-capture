@@ -11,3 +11,5 @@ What made three independent readers misdiagnose it: the abstract adapter's class
 A review pass on the fix caught the fix repeating the original sin: the first draft of the replacement docblock described Path A's payload shape, PII policy and dashboard-side ownership — all true, none of it visible in this file, and all of it able to go stale without anyone touching this class. Trimmed to routing status only, with each path's own docblock left as the source of truth for its behaviour. The reachability claim was likewise narrowed from "unreachable" (a whole-program assertion) to "no live caller / Path B-only helpers".
 
 Standing rule this produced: "zero callers" is a claim about a language's resolution rules, not a grep result. Search case-insensitively, then confirm the symbol is not part of a documented-but-unwired design before proposing deletion.
+
+## [2026-08-22] security | Align consent defaults and clear cached attribution fields

@@ -18,7 +18,7 @@ const vm = require( 'vm' );
 
 const SCRIPT = fs.readFileSync( path.join( __dirname, '..', 'assets/js/tracker.js' ), 'utf8' );
 
-function runCase( { search = '', referrer = '', host = 'client-site.example', consent = null }, cookies = {} ) {
+function runCase( { search = '', referrer = '', host = 'client-site.example', consent = null, requireConsent = 'never' }, cookies = {} ) {
 	const sandbox = {
 		URL,
 		URLSearchParams,
@@ -49,6 +49,7 @@ function runCase( { search = '', referrer = '', host = 'client-site.example', co
 	sandbox.window = {
 		location: { href: 'https://' + host + '/' + search, search, hostname: host, protocol: 'https:', pathname: '/' },
 		addEventListener() {},
+		ApointooCaptureConfig: { consent: { require: requireConsent } },
 	};
 	if ( consent ) {
 		sandbox.window.ApointooCaptureConfig = { consent: { require: 'always' } };
@@ -89,6 +90,12 @@ for ( const c of cases ) {
 // window.apointooTracking() must never throw, even pre-init.
 assert.doesNotThrow( () => runCase( {} ) );
 console.log( 'PASS', 'apointooTracking() does not throw on a signal-less page load' );
+
+{
+	const pending = runCase( { search: '?gclid=abc', requireConsent: 'auto' } );
+	assert.strictEqual( pending.gclid, undefined );
+	console.log( 'PASS', 'auto consent without a CMP does not persist attribution' );
+}
 
 // Consent Mode v2 can expose mixed values. Any explicit denial must win so an
 // ad identifier is never persisted when either relevant storage/use signal says no.
@@ -172,6 +179,7 @@ console.log( 'PASS', 'apointooTracking() does not throw on a signal-less page lo
 	sandbox.window = {
 		location: { href: 'https://client-site.example/?gclid=abc', search: '?gclid=abc', hostname: 'client-site.example', protocol: 'https:', pathname: '/' },
 		addEventListener() {},
+		ApointooCaptureConfig: { consent: { require: 'never' } },
 	};
 	vm.createContext( sandbox );
 	vm.runInContext( SCRIPT, sandbox, { filename: 'tracker.js' } );
@@ -179,6 +187,13 @@ console.log( 'PASS', 'apointooTracking() does not throw on a signal-less page lo
 		assert.strictEqual( inputs.apointoo_lt_channel && inputs.apointoo_lt_channel.value, 'paid_search' );
 		assert.strictEqual( inputs.apointoo_ft_channel && inputs.apointoo_ft_channel.value, 'paid_search' );
 		console.log( 'PASS', 'fillForms() injects apointoo_ft_channel / apointoo_lt_channel hidden inputs' );
+		Object.keys( cookies ).forEach( ( key ) => delete cookies[ key ] );
+		sandbox.window.location.search = '';
+		sandbox.window.location.href = 'https://client-site.example/';
+		vm.runInContext( SCRIPT, sandbox, { filename: 'tracker.js' } );
+		assert.strictEqual( inputs.apointoo_lt_channel.value, '' );
+		assert.strictEqual( inputs.apointoo_ft_channel.value, '' );
+		console.log( 'PASS', 'fillForms() clears cached hidden attribution without visitor data' );
 	} catch ( e ) {
 		failed++;
 		console.error( 'FAIL', 'form injection', '-', e.message );

@@ -52,4 +52,12 @@ assert( 'granted' === $granted['consent']['adStorage'] );
 assert( 'granted' === $granted['consent']['analyticsStorage'] );
 assert( 'api' === $granted['consent']['source'] );
 
+$tracker = file_get_contents( dirname( __DIR__ ) . '/assets/js/tracker.js' );
+$cf7     = file_get_contents( dirname( __DIR__ ) . '/includes/integrations/forms/class-cf7-adapter.php' );
+$wpforms = file_get_contents( dirname( __DIR__ ) . '/includes/integrations/forms/class-wpforms-adapter.php' );
+assert( false === strpos( $tracker, "CONSENT_REQUIRE === 'auto' && ! Consent.detected()" ) );
+assert( false !== strpos( $tracker, "if ( input ) {" ) );
+assert( false === strpos( $cf7, '$attr   = Attribution::from_cookie();' ) );
+assert( false === strpos( $wpforms, '$attribution = Attribution::from_cookie();' ) );
+
 echo "attribution consent contract: ok\n";
