@@ -4,10 +4,12 @@
  * Captures marketing attribution first-party, mints neutral vis_/ses_ ids, derives
  * a source/medium/channel plus a stable ft_channel/lt_channel bucket pair
  * (paid_search/paid_social/organic_search/organic_social/direct/referral/other),
- * fills the hidden fields the form adapters inject, and (optionally) decorates
- * outbound links so attribution survives a cross-domain hand-off. Nothing is sent
- * anywhere by this script — the data rides the form into the site owner's own
- * systems.
+ * reads ad-pixel / GA4 browser ids, fills the hidden fields the form adapters
+ * inject, and (optionally) decorates outbound links so attribution survives a
+ * cross-domain hand-off. With consent it also pushes `contact_whatsapp_start`
+ * to the page's own dataLayer on WhatsApp clicks. Nothing is sent to any
+ * external service by this script — the data rides the form into the site
+ * owner's own systems.
  *
  * Public JS API: window.apointooTracking() — see below.
  *
@@ -29,15 +31,17 @@
 		'visitor_id', 'session_id',
 		'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'utm_id',
 		'gclid', 'gbraid', 'wbraid', 'fbclid', 'msclkid', 'ttclid', 'twclid',
-		'li_fat_id', 'sccid', 'epik', 'rdt_cid', 'dclid',
-		'referrer', 'landing_page',
+		'li_fat_id', 'sccid', 'epik', 'rdt_cid', 'dclid', 'pin_cid', 'snap_cid', 'mc_cid', 'mc_eid',
+		'referrer', 'landing_page', 'lt_landing_page', 'lt_timestamp',
 		'source', 'medium', 'channel', 'lt_channel',
-		'ft_source', 'ft_medium', 'ft_campaign', 'ft_landing_page', 'ft_channel', 'ft_timestamp'
+		'ft_source', 'ft_medium', 'ft_campaign', 'ft_landing_page', 'ft_channel', 'ft_timestamp',
+		'ft_gclid', 'ft_gbraid', 'ft_wbraid', 'ft_fbclid', 'ft_msclkid',
+		'fbc', 'fbp', 'ttp', 'li_gc', 'ga_client_id', 'ga_session_id', 'ga_session_number'
 	];
 
 	var CLICK_IDS = cfg.clickIds && cfg.clickIds.length ? cfg.clickIds : [
 		'gclid', 'gbraid', 'wbraid', 'fbclid', 'msclkid', 'ttclid', 'twclid',
-		'li_fat_id', 'sccid', 'epik', 'rdt_cid', 'dclid'
+		'li_fat_id', 'sccid', 'epik', 'rdt_cid', 'dclid', 'pin_cid', 'snap_cid', 'mc_cid', 'mc_eid'
 	];
 	var UTMS = cfg.utms && cfg.utms.length ? cfg.utms : [
 		'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'utm_id'
@@ -45,6 +49,11 @@
 	var FIRST_TOUCH_KEYS = cfg.firstTouchKeys && cfg.firstTouchKeys.length ? cfg.firstTouchKeys : [
 		'ft_source', 'ft_medium', 'ft_campaign', 'ft_landing_page', 'ft_channel'
 	];
+	// Click ids also kept on the first touch (ft_<id>), so a later campaign touch
+	// can replace the last-touch set without losing the original ad click.
+	var FIRST_TOUCH_CLICK_IDS = [ 'gclid', 'gbraid', 'wbraid', 'fbclid', 'msclkid' ];
+	// Ad-pixel / analytics browser identifiers, refreshed on capture and on submit.
+	var BROWSER_ID_KEYS = [ 'fbc', 'fbp', 'ttp', 'li_gc', 'ga_client_id', 'ga_session_id', 'ga_session_number' ];
 
 	var KEYS = unionKeys( cfg.keys && cfg.keys.length ? cfg.keys : ALL_KEYS );
 
@@ -54,6 +63,14 @@
 	var DECORATION = cfg.decoration || {};
 	var DECORATION_ENABLED = DECORATION.enabled !== false;
 	var ALLOWED_DOMAINS = DECORATION.allowedDomains || [];
+
+	// Registrable cookie domain resolved server-side ('' = host-only cookie).
+	var COOKIE_DOMAIN = typeof cfg.cookieDomain === 'string' ? cfg.cookieDomain : '';
+	// Pins which _ga_<id> cookie supplies ga_session_id ('' = first valid one).
+	var GA4_MEASUREMENT_ID = typeof cfg.ga4MeasurementId === 'string' ? cfg.ga4MeasurementId : '';
+	var WHATSAPP_EVENTS = cfg.whatsappEvents !== false;
+	var WHATSAPP_HOSTS = [ 'wa.me', 'whatsapp.com', 'api.whatsapp.com', 'web.whatsapp.com' ];
+	var WHATSAPP_DEDUPE_MS = 10000;
 
 	var VISITOR_DAYS = 400;
 	var SESSION_MINUTES = 30;
@@ -94,7 +111,8 @@
 	// grouped under paid_search as the nearest fit; revisit if a client needs
 	// display reported apart from search.
 	var SEARCH_CLICK_IDS = [ 'gclid', 'gbraid', 'wbraid', 'msclkid', 'dclid' ];
-	var SOCIAL_CLICK_IDS = [ 'li_fat_id', 'twclid', 'rdt_cid', 'ttclid', 'epik', 'sccid' ];
+	var SOCIAL_CLICK_IDS = [ 'li_fat_id', 'twclid', 'rdt_cid', 'ttclid', 'epik', 'pin_cid', 'sccid', 'snap_cid' ];
+	var EMAIL_CLICK_IDS = [ 'mc_cid', 'mc_eid' ];
 	var SOCIAL_AD_SOURCES = [
 		'facebook', 'meta', 'instagram', 'fb', 'ig', 'linkedin', 'twitter', 'x',
 		'reddit', 'tiktok', 'pinterest', 'snapchat', 'snap'
@@ -290,6 +308,54 @@
 		return match ? decodeURIComponent( match.pop() ) : '';
 	}
 
+	// Every cookie name -> first value (the most specific one the browser sent).
+	function cookieMap() {
+		var out = {};
+		var parts = String( document.cookie || '' ).split( ';' );
+		for ( var i = 0; i < parts.length; i++ ) {
+			var eq = parts[ i ].indexOf( '=' );
+			if ( eq < 1 ) {
+				continue;
+			}
+			var name = parts[ i ].slice( 0, eq ).replace( /^\s+|\s+$/g, '' );
+			if ( ! name || out.hasOwnProperty( name ) ) {
+				continue;
+			}
+			try {
+				out[ name ] = decodeURIComponent( parts[ i ].slice( eq + 1 ) );
+			} catch ( e ) {
+				out[ name ] = parts[ i ].slice( eq + 1 );
+			}
+		}
+		return out;
+	}
+
+	function secureAttr() {
+		return window.location.protocol === 'https:' ? ';Secure' : '';
+	}
+
+	// Resolved once: the configured registrable domain, only when it covers the
+	// current host and the browser accepts a probe cookie on it; else host-only.
+	var cookieDomainResolved = null;
+	function cookieDomain() {
+		if ( cookieDomainResolved !== null ) {
+			return cookieDomainResolved;
+		}
+		cookieDomainResolved = '';
+		var domain = String( COOKIE_DOMAIN || '' ).toLowerCase().replace( /^\.+|\.+$/g, '' );
+		var host = String( window.location.hostname || '' ).toLowerCase();
+		if ( ! domain || ! host || ( host !== domain && host.slice( -( domain.length + 1 ) ) !== '.' + domain ) ) {
+			return cookieDomainResolved;
+		}
+		var probe = 'apointoo_scope_probe';
+		document.cookie = probe + '=1;path=/;domain=' + domain + ';SameSite=Lax' + secureAttr();
+		if ( readCookie( probe ) === '1' ) {
+			cookieDomainResolved = domain;
+		}
+		document.cookie = probe + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;Max-Age=0;path=/;domain=' + domain + ';SameSite=Lax' + secureAttr();
+		return cookieDomainResolved;
+	}
+
 	function writeCookie( name, value, days ) {
 		var expires = '';
 		if ( days ) {
@@ -297,15 +363,23 @@
 			date.setTime( date.getTime() + days * 86400000 );
 			expires = ';expires=' + date.toUTCString();
 		}
-		var secure = window.location.protocol === 'https:' ? ';Secure' : '';
+		var domain = cookieDomain();
+		if ( domain ) {
+			// A host-only twin would shadow the shared cookie on this host.
+			document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;Max-Age=0;path=/;SameSite=Lax' + secureAttr();
+		}
 		document.cookie =
-			name + '=' + encodeURIComponent( value ) + expires + ';path=/;SameSite=Lax' + secure;
+			name + '=' + encodeURIComponent( value ) + expires + ';path=/' +
+			( domain ? ';domain=' + domain : '' ) + ';SameSite=Lax' + secureAttr();
 	}
 
 	function removeCookie( name ) {
-		var secure = window.location.protocol === 'https:' ? ';Secure' : '';
-		document.cookie =
-			name + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;Max-Age=0;path=/;SameSite=Lax' + secure;
+		var expired = '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;Max-Age=0;path=/';
+		document.cookie = name + expired + ';SameSite=Lax' + secureAttr();
+		var domain = cookieDomain();
+		if ( domain ) {
+			document.cookie = name + expired + ';domain=' + domain + ';SameSite=Lax' + secureAttr();
+		}
 	}
 
 	function safeParse( raw ) {
@@ -500,10 +574,10 @@
 		if ( qs.ttclid ) {
 			return 'TikTok Ads';
 		}
-		if ( qs.epik ) {
+		if ( qs.epik || qs.pin_cid ) {
 			return 'Pinterest Ads';
 		}
-		if ( qs.sccid ) {
+		if ( qs.sccid || qs.snap_cid ) {
 			return 'Snapchat Ads';
 		}
 		if ( qs.dclid ) {
@@ -523,6 +597,12 @@
 		// referrer block so a paid visit never falls through to organic.
 		if ( PAID_MEDIUMS.indexOf( med ) !== -1 ) {
 			return paidLabelFromSource( src, med );
+		}
+
+		// Mailchimp campaign clicks — before the referrer block, because webmail
+		// referrers (mail.google.com) would otherwise read as organic search.
+		if ( hasAny( qs, EMAIL_CLICK_IDS ) ) {
+			return 'Mailchimp';
 		}
 
 		// Referrer-based organic classification.
@@ -606,6 +686,10 @@
 		if ( PAID_MEDIUMS.indexOf( med ) !== -1 ) {
 			var src = String( qs.utm_source || '' ).toLowerCase();
 			return ( med === 'paid_social' || SOCIAL_AD_SOURCES.indexOf( src ) !== -1 ) ? 'paid_social' : 'paid_search';
+		}
+
+		if ( hasAny( qs, EMAIL_CLICK_IDS ) ) {
+			return 'other';
 		}
 
 		if ( extHost ) {
@@ -706,11 +790,47 @@
 		return hasSignal ? out : null;
 	}
 
-	// Merge a captured signal into the stored record: last-touch overwrite for
-	// utm/click/derived, first-touch-only for referrer/landing_page + ft_* fields.
-	function mergeRecord( data, signal ) {
+	function hasAny( obj, keys ) {
+		for ( var i = 0; i < keys.length; i++ ) {
+			if ( obj[ keys[ i ] ] ) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	// The page a touch landed on: origin + path, no query (the query's campaign
+	// parameters are already captured as their own fields).
+	function currentLandingUrl() {
+		return sanitizeValue( String( window.location.href || '' ).split( /[?#]/ )[ 0 ] );
+	}
+
+	function pathOf( landingUrl ) {
+		var url = parseUrl( landingUrl );
+		return url ? url.pathname : window.location.pathname;
+	}
+
+	// Merge a captured signal into the stored record.
+	//
+	// A campaign touch (any UTM or click id) replaces the whole last-touch
+	// UTM + click-id set, so a Meta click after a Google click never carries the
+	// stale gclid into the lead (ClickTrail keeps the newest id per platform;
+	// here the newest touch wins outright). A referrer-only touch (organic,
+	// referral) refreshes source/medium/channel and keeps the stored click ids,
+	// so an organic return visit still converts against the original ad click.
+	// First touch — including its Google/Meta/Microsoft click ids — is written
+	// once and never overwritten.
+	function mergeRecord( data, signal, landingUrl ) {
 		var i;
-		var lastTouchKeys = UTMS.concat( CLICK_IDS ).concat( [ 'source', 'medium', 'channel', 'lt_channel' ] );
+		var landing = landingUrl || currentLandingUrl();
+		var campaignKeys = UTMS.concat( CLICK_IDS );
+		var lastTouchKeys = campaignKeys.concat( [ 'source', 'medium', 'channel', 'lt_channel' ] );
+
+		if ( hasAny( signal, campaignKeys ) ) {
+			for ( i = 0; i < campaignKeys.length; i++ ) {
+				delete data[ campaignKeys[ i ] ];
+			}
+		}
 
 		for ( i = 0; i < lastTouchKeys.length; i++ ) {
 			var k = lastTouchKeys[ i ];
@@ -718,13 +838,15 @@
 				data[ k ] = signal[ k ];
 			}
 		}
+		data.lt_landing_page = landing;
+		data.lt_timestamp = String( Date.now() );
 
 		// Referrer + landing page — first touch only.
 		if ( ! data.referrer && signal.referrer ) {
 			data.referrer = signal.referrer;
 		}
 		if ( ! data.landing_page ) {
-			data.landing_page = window.location.pathname;
+			data.landing_page = pathOf( landing );
 		}
 
 		// First touch — set once, never overwrite.
@@ -741,8 +863,111 @@
 			if ( signal.lt_channel ) {
 				data.ft_channel = signal.lt_channel;
 			}
-			data.ft_landing_page = window.location.pathname;
+			for ( i = 0; i < FIRST_TOUCH_CLICK_IDS.length; i++ ) {
+				if ( signal[ FIRST_TOUCH_CLICK_IDS[ i ] ] ) {
+					data[ 'ft_' + FIRST_TOUCH_CLICK_IDS[ i ] ] = signal[ FIRST_TOUCH_CLICK_IDS[ i ] ];
+				}
+			}
+			data.ft_landing_page = pathOf( landing );
 			data.ft_timestamp = String( Date.now() );
+		}
+	}
+
+	// =============================================================================
+	// Browser identifiers — ad-pixel + GA4 cookies (ClickTrail BrowserIdentifiers)
+	// =============================================================================
+
+	// _ga = GA1.1.<random>.<timestamp> -> "<random>.<timestamp>".
+	function parseGaClientId( value ) {
+		var parts = String( value || '' ).split( '.' );
+		if ( parts.length < 4 ) {
+			return '';
+		}
+		var a = parts[ parts.length - 2 ];
+		var b = parts[ parts.length - 1 ];
+		return /^\d+$/.test( a ) && /^\d+$/.test( b ) ? a + '.' + b : '';
+	}
+
+	// _ga_<id> = GS2.1.s<session>$o<number>$g..$t.. (or legacy GS1.1.<session>.<number>.…).
+	function parseGaSession( value ) {
+		var out = {};
+		var v = String( value || '' );
+		var gs2 = /^GS2\.\d+\.(.*)$/.exec( v );
+		if ( gs2 ) {
+			var tokens = gs2[ 1 ].split( '$' );
+			for ( var i = 0; i < tokens.length; i++ ) {
+				var field = tokens[ i ].slice( 1 );
+				if ( tokens[ i ].charAt( 0 ) === 's' && ! out.ga_session_id && /^\d{6,}$/.test( field ) ) {
+					out.ga_session_id = field;
+				} else if ( tokens[ i ].charAt( 0 ) === 'o' && ! out.ga_session_number && /^\d+$/.test( field ) ) {
+					out.ga_session_number = field;
+				}
+			}
+			return out;
+		}
+		if ( v.indexOf( 'GS1.' ) === 0 ) {
+			var p = v.split( '.' );
+			if ( /^\d{6,}$/.test( p[ 2 ] || '' ) ) {
+				out.ga_session_id = p[ 2 ];
+			}
+			if ( /^\d+$/.test( p[ 3 ] || '' ) ) {
+				out.ga_session_number = p[ 3 ];
+			}
+		}
+		return out;
+	}
+
+	function collectBrowserIds( data ) {
+		var c = cookieMap();
+		var out = {};
+		if ( c._fbp ) {
+			out.fbp = c._fbp;
+		}
+		if ( c._fbc ) {
+			out.fbc = c._fbc;
+		} else if ( data.fbclid ) {
+			// Meta's documented fbc format when the pixel has not written _fbc.
+			out.fbc = 'fb.1.' + ( data.lt_timestamp || String( Date.now() ) ) + '.' + data.fbclid;
+		}
+		if ( c._ttp ) {
+			out.ttp = c._ttp;
+		}
+		if ( c.li_gc ) {
+			out.li_gc = c.li_gc;
+		}
+		var clientId = parseGaClientId( c._ga );
+		if ( clientId ) {
+			out.ga_client_id = clientId;
+		}
+		var session = {};
+		if ( GA4_MEASUREMENT_ID ) {
+			session = parseGaSession( c[ '_ga_' + GA4_MEASUREMENT_ID.replace( /^G-/i, '' ) ] );
+		} else {
+			for ( var name in c ) {
+				if ( c.hasOwnProperty( name ) && name.indexOf( '_ga_' ) === 0 ) {
+					session = parseGaSession( c[ name ] );
+					if ( session.ga_session_id ) {
+						break;
+					}
+				}
+			}
+		}
+		if ( session.ga_session_id ) {
+			out.ga_session_id = session.ga_session_id;
+		}
+		if ( session.ga_session_number ) {
+			out.ga_session_number = session.ga_session_number;
+		}
+		return out;
+	}
+
+	function applyBrowserIds( data ) {
+		var ids = collectBrowserIds( data );
+		for ( var i = 0; i < BROWSER_ID_KEYS.length; i++ ) {
+			var value = sanitizeValue( ids[ BROWSER_ID_KEYS[ i ] ] );
+			if ( value ) {
+				data[ BROWSER_ID_KEYS[ i ] ] = value;
+			}
 		}
 	}
 
@@ -765,6 +990,13 @@
 	var Consent = {
 		// Returns true (granted), false (denied), or null (unresolved/unknown).
 		resolve: function () {
+			// CookieYes — an answered banner is the visitor's explicit decision, so
+			// it is read before Consent Mode (a GCM default can stay 'denied' when
+			// CookieYes is not set to push Consent Mode updates).
+			var cky = this.fromCookieYes();
+			if ( cky !== null ) {
+				return cky;
+			}
 			// Google Consent Mode — dataLayer 'consent' updates.
 			var gcm = this.fromGoogleConsentMode();
 			if ( gcm !== null ) {
@@ -864,6 +1096,27 @@
 				}
 			}
 			return null;
+		},
+
+		// cookieyes-consent = "consentid:…,consent:yes,action:yes,…,advertisement:yes".
+		// Unresolved (null) until the visitor has acted on the banner.
+		fromCookieYes: function () {
+			var raw = readCookie( 'cookieyes-consent' );
+			if ( ! raw ) {
+				return null;
+			}
+			var map = {};
+			var pairs = raw.split( ',' );
+			for ( var i = 0; i < pairs.length; i++ ) {
+				var c = pairs[ i ].indexOf( ':' );
+				if ( c > 0 ) {
+					map[ pairs[ i ].slice( 0, c ) ] = pairs[ i ].slice( c + 1 );
+				}
+			}
+			if ( map.action !== 'yes' ) {
+				return null;
+			}
+			return map.advertisement === 'yes';
 		}
 	};
 
@@ -876,7 +1129,8 @@
 			v: 1,
 			savedAt: Date.now(),
 			signal: signal,
-			referrer: ( referrer || '' ).slice( 0, 512 )
+			referrer: ( referrer || '' ).slice( 0, 512 ),
+			landing: currentLandingUrl()
 		} ) );
 	}
 
@@ -936,27 +1190,29 @@
 		return input;
 	}
 
+	function fillForm( form, data ) {
+		for ( var i = 0; i < KEYS.length; i++ ) {
+			var key = KEYS[ i ];
+			var value = data[ key ] ? String( data[ key ] ) : '';
+			var input = form.querySelector( 'input[name="' + PREFIX + key + '"]' );
+			if ( value === '' ) {
+				if ( input ) {
+					input.value = '';
+				}
+				continue;
+			}
+			input = input || ensureHiddenInput( form, PREFIX + key );
+			if ( input.value !== value ) {
+				input.value = value;
+			}
+		}
+	}
+
 	function fillForms( data ) {
 		var forms = document.querySelectorAll( 'form' );
 		for ( var f = 0; f < forms.length; f++ ) {
-			var form = forms[ f ];
-			if ( shouldSkipForm( form ) ) {
-				continue;
-			}
-			for ( var i = 0; i < KEYS.length; i++ ) {
-				var key = KEYS[ i ];
-				var value = data[ key ] ? String( data[ key ] ) : '';
-				var input = form.querySelector( 'input[name="' + PREFIX + key + '"]' );
-				if ( value === '' ) {
-					if ( input ) {
-						input.value = '';
-					}
-					continue;
-				}
-				input = input || ensureHiddenInput( form, PREFIX + key );
-				if ( input.value !== value ) {
-					input.value = value;
-				}
+			if ( ! shouldSkipForm( forms[ f ] ) ) {
+				fillForm( forms[ f ], data );
 			}
 		}
 	}
@@ -1043,21 +1299,23 @@
 	// =============================================================================
 
 	var Engine = {
+		granted: false,
 		decorationBound: false,
 		observer: null,
 
 		// Capture identity + signal; persist to the durable record. Used in the
 		// immediate path (consent not required) and on promotion (consent granted).
-		commit: function ( qs, referrer, promotedSignal ) {
+		commit: function ( qs, referrer, promotedSignal, landingUrl ) {
 			var data = loadDurable();
 			applyIdentity( data );
 
 			var signal = promotedSignal || captureSignal( qs, referrer );
 			if ( signal ) {
-				mergeRecord( data, signal );
+				mergeRecord( data, signal, landingUrl );
 			} else if ( ! data.landing_page ) {
 				data.landing_page = window.location.pathname;
 			}
+			applyBrowserIds( data );
 
 			saveDurable( data );
 			return data;
@@ -1073,48 +1331,79 @@
 			var referrer = document.referrer;
 			var liveSignal = captureSignal( qs, referrer );
 			var promoted = liveSignal;
+			var landing = '';
 
 			if ( ! liveSignal ) {
 				var pending = readPending();
 				if ( pending && pending.signal ) {
 					promoted = pending.signal;
+					landing = pending.landing || '';
 					if ( ! referrer && pending.referrer ) {
 						referrer = pending.referrer;
 					}
 				}
 			}
 
-			var data = this.commit( qs, referrer, promoted );
+			var data = this.commit( qs, referrer, promoted, landing );
 			clearPending();
+			this.activate( data );
+		},
+
+		// Consent is settled as granted (or not required): fill + decorate + watch.
+		activate: function ( data ) {
+			this.granted = true;
 			this.fill( data );
-			this.enableDecoration( data );
+			this.enableDecoration();
 			this.observe( data );
 		},
 
 		deny: function () {
+			this.granted = false;
 			clearDurable();
 			clearPending();
 			clearFilledFields();
 		},
 
-		enableDecoration: function ( dataRef ) {
+		// Decoration reads the live record at click time, so a later withdrawal
+		// (record cleared) stops decoration without unbinding.
+		enableDecoration: function () {
 			if ( ! DECORATION_ENABLED || this.decorationBound ) {
 				return;
 			}
 			this.decorationBound = true;
 			var handler = function ( evt ) {
+				if ( ! Engine.granted ) {
+					return;
+				}
 				var node = evt.target;
 				var a = node && node.closest ? node.closest( 'a' ) : null;
 				if ( ! a ) {
 					return;
 				}
-				var decorated = Decorator.decorate( a.getAttribute( 'href' ), Engine.currentData || dataRef );
+				var decorated = Decorator.decorate( a.getAttribute( 'href' ), loadDurable() );
 				if ( decorated ) {
 					a.href = decorated;
 				}
 			};
 			document.addEventListener( 'mousedown', handler, true );
 			document.addEventListener( 'touchstart', handler, { capture: true, passive: true } );
+		},
+
+		// Refresh browser ids (the pixel may have set _fbp/_ga after landing) and
+		// re-fill the submitted form right before it is sent.
+		onSubmit: function ( evt ) {
+			if ( ! Engine.granted ) {
+				return;
+			}
+			var form = evt.target;
+			if ( ! form || form.tagName !== 'FORM' || shouldSkipForm( form ) ) {
+				return;
+			}
+			var data = loadDurable();
+			applyBrowserIds( data );
+			saveDurable( data );
+			Engine.currentData = data;
+			fillForm( form, data );
 		},
 
 		// Re-run fill (and keep decoration current) when forms/inputs are added.
@@ -1144,7 +1433,7 @@
 						}
 					}
 				}
-				if ( ! hasNew ) {
+				if ( ! hasNew || ! self.granted ) {
 					return;
 				}
 				clearTimeout( timer );
@@ -1159,57 +1448,142 @@
 	};
 
 	// =============================================================================
-	// Late-grant listeners + short poll
+	// WhatsApp — contact_whatsapp_start (ClickTrail event name + params)
 	// =============================================================================
 
-	function bindConsentListeners( onGrant, onDeny ) {
-		// Cookiebot.
-		window.addEventListener( 'CookiebotOnConsentReady', function () {
-			var v = Consent.resolve();
-			if ( v === true ) {
-				onGrant();
-			} else if ( v === false ) {
-				onDeny();
-			}
-		} );
+	var WhatsApp = {
+		seen: {},
 
-		// Generic consent-update events some CMPs / GTM setups dispatch.
-		document.addEventListener( 'cmplz_status_change', function () {
+		// wa.me / api|web.whatsapp.com / whatsapp:// -> { link_url, phone } or null.
+		parse: function ( raw ) {
+			var url = parseUrl( raw );
+			if ( ! url ) {
+				return null;
+			}
+			var host = normalizeHost( url.hostname );
+			if ( url.protocol !== 'whatsapp:' && WHATSAPP_HOSTS.indexOf( host ) === -1 ) {
+				return null;
+			}
+			var candidate = '';
+			try {
+				candidate = host === 'wa.me' ?
+					decodeURIComponent( url.pathname.split( '/' )[ 1 ] || '' ) :
+					( url.searchParams.get( 'phone' ) || '' );
+			} catch ( e ) {
+				candidate = '';
+			}
+			var phone = /^[+\d\s().-]+$/.test( candidate ) ? candidate.replace( /\D/g, '' ) : '';
+			if ( phone.length < 7 || phone.length > 15 ) {
+				phone = '';
+			}
+			// The pre-filled message can hold visitor-typed text: never forward it.
+			url.searchParams.delete( 'text' );
+			url.hash = '';
+			return { link_url: url.toString(), phone: phone };
+		},
+
+		track: function ( raw, label ) {
+			if ( ! Engine.granted ) {
+				return;
+			}
+			var wa = this.parse( raw );
+			if ( ! wa ) {
+				return;
+			}
+			var now = Date.now();
+			if ( this.seen[ wa.link_url ] && now - this.seen[ wa.link_url ] < WHATSAPP_DEDUPE_MS ) {
+				return;
+			}
+			this.seen[ wa.link_url ] = now;
+
+			var data = loadDurable();
+			window.dataLayer = window.dataLayer || [];
+			window.dataLayer.push( {
+				event: 'contact_whatsapp_start',
+				event_id: randomId( 'evt' ),
+				contact_type: 'whatsapp',
+				link_url: wa.link_url,
+				phone: wa.phone,
+				cta_label: sanitizeValue( label ).slice( 0, 100 ),
+				apointoo_visitor_id: data.visitor_id || '',
+				apointoo_session_id: data.session_id || '',
+				source: data.source || '',
+				medium: data.medium || '',
+				campaign: data.utm_campaign || '',
+				channel: data.channel || '',
+				lt_channel: data.lt_channel || ''
+			} );
+		},
+
+		// Anchors with a WhatsApp href, plus widgets that open WhatsApp through
+		// window.open with no href at all (JoinChat, most floating chat buttons).
+		bind: function () {
+			document.addEventListener( 'click', function ( evt ) {
+				var node = evt.target;
+				var a = node && node.closest ? node.closest( 'a[href]' ) : null;
+				if ( a ) {
+					WhatsApp.track( a.getAttribute( 'href' ), a.textContent || '' );
+				}
+			}, true );
+
+			var nativeOpen = window.open;
+			if ( typeof nativeOpen === 'function' ) {
+				window.open = function ( target ) {
+					try {
+						WhatsApp.track( target, '' );
+					} catch ( e ) {}
+					return nativeOpen.apply( this, arguments );
+				};
+			}
+		}
+	};
+
+	// =============================================================================
+	// Consent listeners + short poll
+	// =============================================================================
+
+	// CMP events stay bound for the whole page view, so a withdrawal after a
+	// grant clears the record. The poll only runs while consent is unresolved.
+	function bindConsentListeners( onGrant, onDeny, pollForGrant ) {
+		var onChange = function () {
 			var v = Consent.resolve();
 			if ( v === true ) {
 				onGrant();
 			} else if ( v === false ) {
 				onDeny();
 			}
-		} );
+		};
+
+		// Cookiebot.
+		window.addEventListener( 'CookiebotOnConsentReady', onChange );
+		// Complianz.
+		document.addEventListener( 'cmplz_status_change', onChange );
+		// CookieYes (accept, reject, and later changes from the revisit button).
+		document.addEventListener( 'cookieyes_consent_update', onChange );
+
+		if ( ! pollForGrant ) {
+			return;
+		}
 
 		// Short poll: catch a late grant where no event is available (e.g. Google
 		// Consent Mode update pushed to dataLayer without a custom event).
-		var attempts = 0;
-		var maxAttempts = 40; // ~20s at 500ms.
-		var settled = false;
 		// The poll only acts on an affirmative GRANT. A `false` here is ambiguous
 		// (an undecided Cookiebot banner / GCM default both read as denied), and
 		// nothing is persisted without a grant anyway, so we never auto-deny from the
-		// poll — an explicit withdrawal comes through the CMP events below.
+		// poll — an explicit withdrawal comes through the CMP events above.
+		var attempts = 0;
+		var maxAttempts = 40; // ~20s at 500ms.
 		var poll = setInterval( function () {
 			attempts++;
-			var v = Consent.resolve();
-			if ( v === true ) {
-				settled = true;
+			if ( Engine.granted || attempts >= maxAttempts ) {
+				clearInterval( poll );
+				return;
+			}
+			if ( Consent.resolve() === true ) {
 				clearInterval( poll );
 				onGrant();
-			} else if ( attempts >= maxAttempts ) {
-				clearInterval( poll );
 			}
 		}, 500 );
-
-		// Stop polling once settled (guard against races).
-		return function () {
-			if ( ! settled ) {
-				clearInterval( poll );
-			}
-		};
 	}
 
 	// =============================================================================
@@ -1221,12 +1595,14 @@
 			return;
 		}
 
+		document.addEventListener( 'submit', Engine.onSubmit, true );
+		if ( WHATSAPP_EVENTS ) {
+			WhatsApp.bind();
+		}
+
 		// Legacy path — capture + persist + fill + decorate immediately.
 		if ( CONSENT_REQUIRE === 'never' ) {
-			var data = Engine.commit( params(), document.referrer );
-			Engine.fill( data );
-			Engine.enableDecoration( data );
-			Engine.observe( data );
+			Engine.activate( Engine.commit( params(), document.referrer ) );
 			return;
 		}
 
@@ -1241,18 +1617,21 @@
 		// Only persist on an affirmative grant. An initial `false`/unresolved
 		// (e.g. no CMP or a banner still showing) is NOT
 		// treated as a final deny — we wait for a real decision.
-		if ( Consent.resolve() === true ) {
+		var grantedNow = Consent.resolve() === true;
+		if ( grantedNow ) {
 			Engine.promote();
-			return;
 		}
 
 		bindConsentListeners(
 			function () {
-				Engine.promote();
+				if ( ! Engine.granted ) {
+					Engine.promote();
+				}
 			},
 			function () {
 				Engine.deny();
-			}
+			},
+			! grantedNow
 		);
 	}
 

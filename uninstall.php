@@ -15,3 +15,5 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 
 delete_option( 'apointoo_capture_settings' );
 delete_option( 'apointoo_capture_forward_log' );
+delete_option( 'apointoo_capture_cookie_scope' );
+delete_option( 'apointoo_capture_ga4_measurement_id' );

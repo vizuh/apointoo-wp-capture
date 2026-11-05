@@ -31,6 +31,7 @@
     "test": [
       "@php -d zend.assertions=1 -d assert.exception=1 tests/attribution-consent-contract.php",
       "@php -d zend.assertions=1 -d assert.exception=1 tests/settings-endpoint-contract.php",
+      "@php -d zend.assertions=1 -d assert.exception=1 tests/intake-payload-contract.php",
       "node bin/verify-channel-bucket.js"
     ]
   }
