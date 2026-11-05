@@ -2,7 +2,7 @@
 Contributors: hugoc
 Tags: attribution, conversion tracking, forms, consent, leads
 Requires at least: 6.4
-Tested up to: 7.0
+Tested up to: 7.1
 Requires PHP: 8.0
 Stable tag: 0.6.0
 License: GPLv2 or later

@@ -269,9 +269,26 @@ check( 'browser ids: _fbp/_fbc/_ga and GS2 + GS1 session cookies', () => {
 	assert.strictEqual( gs1.ga_session_number, '3' );
 } );
 
-check( 'fbc is synthesised from fbclid when the pixel has not set _fbc', () => {
-	const data = runCase( { search: '?fbclid=F9' } );
-	assert.match( data.fbc, /^fb\.1\.\d+\.F9$/ );
+check( 'synthesised fbc keeps its creation time across later visits', () => {
+	const jar = {};
+	const v1 = runCase( { search: '?fbclid=F9' }, jar );
+	assert.match( v1.fbc, /^fb\.1\.\d+\.F9$/ );
+	const v2 = runCase( { referrer: 'https://www.google.com/' }, jar );
+	assert.strictEqual( v2.fbc, v1.fbc );
+} );
+
+// A visitor whose record was written by 0.5.x (first touch, no ft_<id>, no
+// lt_timestamp) must not lose the stored Google click on the first new campaign.
+check( '0.5.x record keeps its gclid as first touch on the next campaign touch', () => {
+	const jar = { apointoo_capture: JSON.stringify( {
+		visitor_id: 'vis_old', session_id: 'ses_old', _session_seen: 1,
+		gclid: 'OLD', utm_source: 'google', ft_source: 'google', ft_channel: 'paid_search', ft_timestamp: '1700000000000',
+	} ) };
+	const v = runCase( { search: '?fbclid=NEW&utm_medium=paid_social&utm_source=facebook' }, jar );
+	assert.strictEqual( v.gclid, undefined );
+	assert.strictEqual( v.ft_gclid, 'OLD' );
+	assert.strictEqual( v.fbclid, 'NEW' );
+	assert.strictEqual( v.visitor_id, 'vis_old' );
 } );
 
 // CookieYes: an answered banner decides, even when a GCM default says denied.

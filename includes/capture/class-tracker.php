@@ -81,8 +81,8 @@ class Tracker {
 	}
 
 	/**
-	 * Hosting / multi-tenant suffixes where a "registrable" domain is shared with
-	 * strangers, so the attribution cookie must stay host-only.
+	 * WordPress hosting / multi-tenant suffixes where a "registrable" domain is
+	 * shared with strangers, so the attribution cookie must stay host-only.
 	 *
 	 * @var string[]
 	 */
@@ -91,16 +91,9 @@ class Tracker {
 		'wpenginepowered.com',
 		'kinsta.cloud',
 		'cloudwaysapps.com',
-		'github.io',
-		'herokuapp.com',
-		'vercel.app',
-		'netlify.app',
-		'pages.dev',
 		'azurewebsites.net',
-		'myshopify.com',
 		'wordpress.com',
 		'wpcomstaging.com',
-		'blogspot.com',
 	);
 
 	/**

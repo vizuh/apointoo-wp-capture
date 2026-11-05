@@ -826,6 +826,18 @@
 		var campaignKeys = UTMS.concat( CLICK_IDS );
 		var lastTouchKeys = campaignKeys.concat( [ 'source', 'medium', 'channel', 'lt_channel' ] );
 
+		// A 0.5.x record has a first touch but never stored ft_<click id>; carry
+		// its click ids into the first touch once, before the replace below
+		// would drop them. (0.6.0+ records always carry lt_timestamp.)
+		if ( data.ft_timestamp && ! data.lt_timestamp ) {
+			for ( i = 0; i < FIRST_TOUCH_CLICK_IDS.length; i++ ) {
+				var id = FIRST_TOUCH_CLICK_IDS[ i ];
+				if ( data[ id ] && ! data[ 'ft_' + id ] ) {
+					data[ 'ft_' + id ] = data[ id ];
+				}
+			}
+		}
+
 		if ( hasAny( signal, campaignKeys ) ) {
 			for ( i = 0; i < campaignKeys.length; i++ ) {
 				delete data[ campaignKeys[ i ] ];
@@ -927,7 +939,11 @@
 			out.fbc = c._fbc;
 		} else if ( data.fbclid ) {
 			// Meta's documented fbc format when the pixel has not written _fbc.
-			out.fbc = 'fb.1.' + ( data.lt_timestamp || String( Date.now() ) ) + '.' + data.fbclid;
+			// The creation time is when this fbclid was first seen, so an fbc
+			// already built for the same fbclid is kept as-is.
+			var suffix = '.' + data.fbclid;
+			var stored = String( data.fbc || '' );
+			out.fbc = stored.slice( -suffix.length ) === suffix ? stored : 'fb.1.' + String( Date.now() ) + suffix;
 		}
 		if ( c._ttp ) {
 			out.ttp = c._ttp;
