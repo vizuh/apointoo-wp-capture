@@ -4,7 +4,7 @@ Tags: attribution, conversion tracking, forms, consent, leads
 Requires at least: 6.4
 Tested up to: 7.1
 Requires PHP: 8.0
-Stable tag: 0.6.0
+Stable tag: 0.6.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -87,6 +87,9 @@ all run the plugin, set the `apointoo_capture_cookie_scope` option (or filter) t
 `registrable`. Hosting domains such as `wpengine.com` always stay host-only.
 
 == Changelog ==
+
+= 0.6.1 =
+* Keep a captured ad click while the CookieYes banner is still unanswered. CookieYes announces its default state on every page load, and 0.6.0 treated that as a rejection, so a click was lost when the visitor accepted on a later page.
 
 = 0.6.0 =
 * A new campaign touch (any UTM or click ID) replaces the whole last-touch campaign set, so an older click ID is never sent with a newer visit; the first touch keeps its Google, Meta, and Microsoft click IDs.

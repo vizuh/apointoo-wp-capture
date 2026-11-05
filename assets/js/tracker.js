@@ -1575,7 +1575,17 @@
 		// Complianz.
 		document.addEventListener( 'cmplz_status_change', onChange );
 		// CookieYes (accept, reject, and later changes from the revisit button).
-		document.addEventListener( 'cookieyes_consent_update', onChange );
+		// It also fires on every page load with the unanswered default state, so
+		// only CookieYes's own answered decision counts here — a Consent Mode
+		// default 'denied' must not clear the pending capture.
+		document.addEventListener( 'cookieyes_consent_update', function () {
+			var v = Consent.fromCookieYes();
+			if ( v === true ) {
+				onGrant();
+			} else if ( v === false ) {
+				onDeny();
+			}
+		} );
 
 		if ( ! pollForGrant ) {
 			return;

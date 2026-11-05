@@ -313,6 +313,30 @@ check( 'CookieYes withdrawal after a grant clears the record', () => {
 	assert.deepStrictEqual( { ...lastSandbox.window.apointooTracking() }, {} );
 } );
 
+// CookieYes fires cookieyes_consent_update on every page load with the banner
+// still unanswered. With a Consent Mode default of 'denied' on the page, that
+// load event must not clear the pending capture; the later accept promotes it.
+check( 'CookieYes page-load event keeps the pending capture; accept promotes it', () => {
+	const store = {};
+	const sessionStorage = {
+		getItem: ( k ) => ( k in store ? store[ k ] : null ),
+		setItem: ( k, v ) => { store[ k ] = String( v ); },
+		removeItem: ( k ) => { delete store[ k ]; },
+	};
+	const jar = { 'cookieyes-consent': 'consentid:x,consent:no,action:,necessary:yes,advertisement:no' };
+	const before = runCase( {
+		search: '?gclid=G7',
+		requireConsent: 'auto',
+		win: { sessionStorage, dataLayer: [ [ 'consent', 'default', { ad_storage: 'denied', ad_user_data: 'denied' } ] ] },
+	}, jar );
+	assert.strictEqual( before.gclid, undefined );
+	lastSandbox.listeners.cookieyes_consent_update.forEach( ( fn ) => fn() );
+	assert.ok( store.apointoo_pending, 'pending capture must survive the load event' );
+	jar[ 'cookieyes-consent' ] = 'consentid:x,consent:yes,action:yes,necessary:yes,advertisement:yes';
+	lastSandbox.listeners.cookieyes_consent_update.forEach( ( fn ) => fn() );
+	assert.strictEqual( lastSandbox.window.apointooTracking().gclid, 'G7' );
+} );
+
 // JoinChat-style widgets open WhatsApp through window.open with no href.
 check( 'window.open to wa.me pushes contact_whatsapp_start once, without the message text', () => {
 	const opened = [];
