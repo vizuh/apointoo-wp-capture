@@ -194,7 +194,7 @@ abstract class Abstract_Form_Adapter implements Form_Adapter_Interface {
 			return;
 		}
 
-		$attribution  = Attribution::to_intake_payload();
+		$attribution  = Attribution::to_intake_payload( $this->submission_page_url() );
 		$cookie       = Attribution::from_cookie();
 		$has_identity = isset( $cookie['apointoo_visitor_id'] ) || isset( $cookie['apointoo_session_id'] );
 		$have_email   = ! empty( $lead['email'] );
@@ -261,6 +261,26 @@ abstract class Abstract_Form_Adapter implements Form_Adapter_Interface {
 		}
 
 		Forward_Log::record( $entry );
+	}
+
+	/**
+	 * The page the form was submitted from (the request's Referer), only when it
+	 * is on this site's host. AJAX form plugins post to admin-ajax.php, so the
+	 * Referer — not the request URI — is the page the visitor was on.
+	 *
+	 * @return string Empty when unknown or off-site.
+	 */
+	protected function submission_page_url(): string {
+		$referer = wp_get_raw_referer();
+		if ( ! is_string( $referer ) || '' === $referer ) {
+			return '';
+		}
+		$referer_host = wp_parse_url( $referer, PHP_URL_HOST );
+		$home_host    = wp_parse_url( home_url(), PHP_URL_HOST );
+		if ( ! is_string( $referer_host ) || ! is_string( $home_host ) || strtolower( $referer_host ) !== strtolower( $home_host ) ) {
+			return '';
+		}
+		return esc_url_raw( $referer );
 	}
 
 	/**

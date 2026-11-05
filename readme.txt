@@ -2,9 +2,9 @@
 Contributors: hugoc
 Tags: attribution, conversion tracking, forms, consent, leads
 Requires at least: 6.4
-Tested up to: 7.0
+Tested up to: 7.1
 Requires PHP: 8.0
-Stable tag: 0.5.1
+Stable tag: 0.6.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -63,10 +63,40 @@ to the configured Apointoo tenant and stored under that tenant's retention polic
 
 = Does it respect consent? =
 
-Yes. It reads your existing consent plugin (WP Consent API / Complianz /
-Cookiebot) and only forwards ad identifiers when marketing consent is granted.
+Yes. It reads your existing consent plugin (WP Consent API, CookieYes, Cookiebot,
+Complianz, OneTrust, or Google Consent Mode) and stores nothing until marketing
+consent is granted. Ad identifiers are only forwarded when marketing consent is
+granted, and GA4 identifiers only when analytics consent is granted.
+
+= What does it capture? =
+
+First-touch and last-touch UTMs, ad click IDs (Google `gclid`/`gbraid`/`wbraid`,
+Meta, Microsoft, TikTok, X, LinkedIn, Snapchat, Pinterest, Reddit, DV360, and
+Mailchimp), the referrer and landing pages, and the browser IDs ad platforms use
+for matching (`_fbc`, `_fbp`, `_ttp`, `li_gc`, GA4 client and session IDs). When a
+visitor returns through a new ad, that newest campaign replaces the earlier one;
+the first click is kept on the first touch. With consent, clicks on WhatsApp
+links or chat widgets push a `contact_whatsapp_start` event to the page's
+dataLayer for Google Tag Manager.
+
+= Can I share attribution across subdomains? =
+
+Links to your own subdomains and to domains in the `apointoo_capture_allowed_domains`
+option carry the campaign parameters. To share one cookie between subdomains that
+all run the plugin, set the `apointoo_capture_cookie_scope` option (or filter) to
+`registrable`. Hosting domains such as `wpengine.com` always stay host-only.
 
 == Changelog ==
+
+= 0.6.0 =
+* A new campaign touch (any UTM or click ID) replaces the whole last-touch campaign set, so an older click ID is never sent with a newer visit; the first touch keeps its Google, Meta, and Microsoft click IDs.
+* Capture Pinterest `pin_cid`, Snapchat `snap_cid`, and Mailchimp `mc_cid`/`mc_eid`, plus `_fbc`/`_fbp`/`_ttp`/`li_gc` and GA4 client/session IDs, refreshed on form submit.
+* Send the dashboard a nested last touch, first-touch click IDs, landing timestamps, browser IDs, and the real submission page URL.
+* Read CookieYes directly in the browser and on the server, and react to consent withdrawal after a grant.
+* Stop treating the WP Consent API as "granted" when no consent plugin has registered with it; fall back to the CookieYes, Cookiebot, Complianz, or OneTrust cookie.
+* Push `contact_whatsapp_start` for WhatsApp links and chat widgets that open WhatsApp (such as Join.chat).
+* Optional registrable-domain cookie scope for multi-subdomain sites.
+* Fix the script version string, which still reported 0.5.0.
 
 = 0.5.1 =
 * Make explicit Consent Mode denial win when advertising storage and user-data signals conflict.
